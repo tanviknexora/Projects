@@ -1440,6 +1440,10 @@ def smart_parse(num):
 # Streamlit UI
 # =========================
 st.set_page_config(page_title="Call & CRM Analysis", layout="wide")
+# =========================
+# Streamlit UI
+# =========================
+st.set_page_config(page_title="Call & CRM Analysis", layout="wide")
 st.title("📞 Call & CRM Connectivity Dashboard")
 
 # Upload files
@@ -1472,11 +1476,35 @@ if crm_file and dialer_file:
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
 
     # =========================
-    # Analysis
+    # Sidebar Filters
+    # =========================
+    st.sidebar.header("🔎 Filters")
+
+    # Filter by source
+    sources = df_calls["utm_hit_utmSource"].dropna().unique().tolist()
+    selected_sources = st.sidebar.multiselect("Select Source(s)", sources, default=sources)
+
+    # Filter by campaign
+    campaigns = df_calls["utm_hit_utmCampaign"].dropna().unique().tolist()
+    selected_campaigns = st.sidebar.multiselect("Select Campaign(s)", campaigns, default=campaigns)
+
+    # Filter by call status
+    statuses = df_calls["call status"].dropna().unique().tolist()
+    selected_status = st.sidebar.multiselect("Select Call Status", statuses, default=statuses)
+
+    # Apply filters
+    df_filtered = df_calls[
+        df_calls["utm_hit_utmSource"].isin(selected_sources) &
+        df_calls["utm_hit_utmCampaign"].isin(selected_campaigns) &
+        df_calls["call status"].isin(selected_status)
+    ]
+
+    # =========================
+    # Analysis (with filters)
     # =========================
     st.subheader("Dialer Summary by Contact")
     dialer_summary = (
-        df_calls.groupby(["cleaned_phone", "first_name", "call status"])
+        df_filtered.groupby(["cleaned_phone", "first_name", "call status"])
         .size()
         .unstack(fill_value=0)
         .reset_index()
@@ -1486,8 +1514,8 @@ if crm_file and dialer_file:
 
     st.subheader("Campaign Summary (Source + Campaign)")
     campaign_summary = (
-        df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", 
-                          "cleaned_phone", "first_name", "call status"])
+        df_filtered.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", 
+                             "cleaned_phone", "first_name", "call status"])
         .size()
         .unstack(fill_value=0)
         .reset_index()
@@ -1497,7 +1525,7 @@ if crm_file and dialer_file:
 
     st.subheader("Connectivity Rate by Source")
     source_connectivity = (
-        df_calls.groupby(["utm_hit_utmSource", "call status"])
+        df_filtered.groupby(["utm_hit_utmSource", "call status"])
         .size()
         .unstack(fill_value=0)
         .reset_index()
@@ -1516,4 +1544,3 @@ if crm_file and dialer_file:
     # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
-
