@@ -1,8 +1,18 @@
-import streamlit as st
 import pandas as pd
+import numpy as np
+import os
+from datetime import datetime, timedelta
+from pandas import json_normalize
 import ast
-import phonenumbers
-from calling_codes import CALLING_CODE_TO_ISO
+import re
+
+# --- Ensure phonenumbers is installed ---
+try:
+    import phonenumbers
+except ImportError:
+    import subprocess, sys
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "phonenumbers"])
+    import phonenumbers
 
 # =========================
 # Helper functions
