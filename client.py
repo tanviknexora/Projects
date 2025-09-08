@@ -1410,42 +1410,87 @@ ISO_TO_CALLING_CODE = {
     "7"
   ]
 }
+if crm_file and dialer_file:
+    # Read CRM data
+    df = pd.read_excel(crm_file)
+    df.columns = df.columns.astype(str).str.lower()
+    
+    # Parse UTM field
+    if "utm_hit" in df.columns:
+        df["utm_hit"] = df["utm_hit"].apply(parse_utm)
+        utm_df = pd.json_normalize(df["utm_hit"]).add_prefix("utm_hit_")
+        df = pd.concat([df.drop(columns=["utm_hit"]), utm_df], axis=1)
+
+    # Read Dialer data
+    dialer = pd.read_excel(dialer_file)
+    dialer.columns = dialer.columns.astype(str).str.lower()
+    dialer = dialer[['customer number','start time','end time','call status']]
+    
+    # Clean numbers
+    df["cleaned_phone"] = df["phone"].apply(smart_parse)
+    dialer["cleaned_phone"] = dialer["customer number"].apply(smart_parse)
+
+    # Merge
+    df_calls = df.merge(
+        dialer.drop(columns=["customer number"]), 
+        on="cleaned_phone", how="left"
+    )
+    df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
 
     # =========================
-    # Analysis (with filters)
+    # Sidebar Filters
     # =========================
-    st.subheader("Dialer Summary by Contact")
+    st.sidebar.header("🔎 Filters")
 
-    # --- Filters ---
+    # Filter by source
+    sources = df_calls["utm_hit_utmSource"].dropna().unique().tolist()
+    selected_sources = st.sidebar.multiselect("Select Source(s)", sources, default=sources)
+
+    # Filter by campaign
+    campaigns = df_calls["utm_hit_utmCampaign"].dropna().unique().tolist()
+    selected_campaigns = st.sidebar.multiselect("Select Campaign(s)", campaigns, default=campaigns)
+
+    # Filter by call status
+    statuses = df_calls["call status"].dropna().unique().tolist()
+    selected_status = st.sidebar.multiselect("Select Call Status", statuses, default=statuses)
+
+    # Filter by first name / phone
     unique_names = sorted(df_calls["first_name"].dropna().unique())
     unique_numbers = sorted(df_calls["cleaned_phone"].dropna().unique())
 
-    selected_names = st.multiselect("Filter by First Name", unique_names)
-    selected_numbers = st.multiselect("Filter by Phone Number", unique_numbers)
+    selected_names = st.sidebar.multiselect("Filter by First Name", unique_names)
+    selected_numbers = st.sidebar.multiselect("Filter by Phone Number", unique_numbers)
 
-    # Apply filters
-    filtered_df = df_calls.copy()
+    # Apply all filters
+    df_filtered = df_calls[
+        df_calls["utm_hit_utmSource"].isin(selected_sources) &
+        df_calls["utm_hit_utmCampaign"].isin(selected_campaigns) &
+        df_calls["call status"].isin(selected_status)
+    ]
     if selected_names:
-        filtered_df = filtered_df[filtered_df["first_name"].isin(selected_names)]
+        df_filtered = df_filtered[df_filtered["first_name"].isin(selected_names)]
     if selected_numbers:
-        filtered_df = filtered_df[filtered_df["cleaned_phone"].isin(selected_numbers)]
+        df_filtered = df_filtered[df_filtered["cleaned_phone"].isin(selected_numbers)]
 
-    # --- Dialer summary table ---
+    # =========================
+    # Analysis
+    # =========================
+    st.subheader("Dialer Summary by Contact")
     dialer_summary = (
-        filtered_df.groupby(["cleaned_phone", "first_name", "call status"])
+        df_filtered.groupby(["cleaned_phone", "first_name", "call status"])
         .size()
         .unstack(fill_value=0)
         .reset_index()
         .rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
     )
-
     st.dataframe(dialer_summary)
 
     st.subheader("Campaign Summary (Source + Campaign)")
     campaign_summary = (
-        df_filtered.groupby(
-            ["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone", "first_name", "call status"]
-        )
+        df_filtered.groupby([
+            "utm_hit_utmSource", "utm_hit_utmCampaign", 
+            "cleaned_phone", "first_name", "call status"
+        ])
         .size()
         .unstack(fill_value=0)
         .reset_index()
@@ -1469,8 +1514,7 @@ ISO_TO_CALLING_CODE = {
     ).round(2)
     st.dataframe(source_connectivity)
 
-    # =========================
-    # Optional charts
-    # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
-    st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+    st.bar_chart(
+        source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"]
+    )
