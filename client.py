@@ -6,14 +6,6 @@ from pandas import json_normalize
 import ast
 import re
 
-# --- Ensure phonenumbers is installed ---
-try:
-    import phonenumbers
-except ImportError:
-    import subprocess, sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "phonenumbers"])
-    import phonenumbers
-
 # =========================
 # Helper functions
 # =========================
@@ -135,3 +127,4 @@ if crm_file and dialer_file:
     # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
