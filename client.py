@@ -1503,14 +1503,32 @@ if crm_file and dialer_file:
     # Analysis (with filters)
     # =========================
     st.subheader("Dialer Summary by Contact")
-    dialer_summary = (
-        df_filtered.groupby(["cleaned_phone", "first_name", "call status"])
-        .size()
-        .unstack(fill_value=0)
-        .reset_index()
-        .rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
-    )
-    st.dataframe(dialer_summary)
+
+# --- Filters ---
+unique_names = sorted(df_calls["first_name"].dropna().unique())
+unique_numbers = sorted(df_calls["cleaned_phone"].dropna().unique())
+
+selected_names = st.multiselect("Filter by First Name", unique_names)
+selected_numbers = st.multiselect("Filter by Phone Number", unique_numbers)
+
+# Apply filters
+filtered_df = df_calls.copy()
+if selected_names:
+    filtered_df = filtered_df[filtered_df["first_name"].isin(selected_names)]
+if selected_numbers:
+    filtered_df = filtered_df[filtered_df["cleaned_phone"].isin(selected_numbers)]
+
+# --- Dialer summary table ---
+dialer_summary = (
+    filtered_df.groupby(["cleaned_phone", "first_name", "call status"])
+    .size()
+    .unstack(fill_value=0)
+    .reset_index()
+    .rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
+)
+
+st.dataframe(dialer_summary)
+
 
     st.subheader("Campaign Summary (Source + Campaign)")
     campaign_summary = (
@@ -1544,3 +1562,4 @@ if crm_file and dialer_file:
     # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
