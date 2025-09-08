@@ -1410,6 +1410,32 @@ ISO_TO_CALLING_CODE = {
     "7"
   ]
 }
+# Sort prefixes once
+sorted_prefixes = sorted(CALLING_CODE_TO_ISO.keys(), key=lambda x: -len(x))
+
+def detect_region(num):
+    num = str(num).lstrip("+")
+    for prefix in sorted_prefixes:
+        if num.startswith(prefix):
+            return CALLING_CODE_TO_ISO[prefix]
+    return None
+
+def smart_parse(num):
+    s = str(num).strip()
+    if not s:
+        return None
+    if not s.startswith("+"):
+        s = "+" + s
+    try:
+        parsed = phonenumbers.parse(s, None)
+        if phonenumbers.is_valid_number(parsed):
+            return phonenumbers.format_number(
+                parsed, phonenumbers.PhoneNumberFormat.E164
+            ).replace("+", "")
+    except:
+        return None
+    return None
+
 # =========================
 # Streamlit UI
 # =========================
@@ -1496,6 +1522,23 @@ if crm_file and dialer_file:
     )
     st.dataframe(dialer_summary)
 
+    # 👉 Extra filters for this section (phone + name text search)
+    st.write("### 🔍 Search in Dialer Summary")
+    phone_filter = st.text_input("Search by Phone Number (partial)")
+    name_filter = st.text_input("Search by First Name (partial, case-insensitive)")
+
+    filtered_summary = dialer_summary.copy()
+    if phone_filter:
+        filtered_summary = filtered_summary[
+            filtered_summary["cleaned_phone"].astype(str).str.contains(phone_filter, na=False)
+        ]
+    if name_filter:
+        filtered_summary = filtered_summary[
+            filtered_summary["first_name"].astype(str).str.contains(name_filter, case=False, na=False)
+        ]
+    st.dataframe(filtered_summary)
+
+    # Campaign summary
     st.subheader("Campaign Summary (Source + Campaign)")
     campaign_summary = (
         df_filtered.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", 
@@ -1507,6 +1550,7 @@ if crm_file and dialer_file:
     )
     st.dataframe(campaign_summary)
 
+    # Connectivity rate by source
     st.subheader("Connectivity Rate by Source")
     source_connectivity = (
         df_filtered.groupby(["utm_hit_utmSource", "call status"])
@@ -1523,10 +1567,9 @@ if crm_file and dialer_file:
     ).round(2)
     st.dataframe(source_connectivity)
 
-    # =========================
-    # Optional charts
-    # =========================
+    # Chart
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(
         source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"]
     )
+
