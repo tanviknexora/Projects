@@ -7,10 +7,10 @@ import phonenumbers
 import streamlit as st
 
 # =========================
-# Calling code dictionary
-# =========================
+
+# Auto-generated global mapping of calling codes <-> ISO alpha-2
 CALLING_CODE_TO_ISO = {
-"1": [
+  "1": [
     "US",
     "CA",
     "AG",
@@ -1395,6 +1395,7 @@ ISO_TO_CALLING_CODE = {
   ]
 }
 
+
 # =========================
 # Helper functions
 # =========================
@@ -1503,60 +1504,55 @@ if crm_file and dialer_file:
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
 
     # =========================
-# Dialer Summary by Contact
-# =========================
-st.subheader("Dialer Summary by Contact")
+    # Dialer Summary by Contact
+    # =========================
+    st.subheader("Dialer Summary by Contact")
 
-# Add filters (multiselect)
-names_filter = st.multiselect(
-    "Filter by First Name(s)",
-    options=sorted(dialer_summary["first_name"].dropna().unique())
-)
-
-phones_filter = st.multiselect(
-    "Filter by Phone Number(s)",
-    options=sorted(dialer_summary["cleaned_phone"].dropna().unique())
-)
-
-filtered_summary = dialer_summary.copy()
-if names_filter:
-    filtered_summary = filtered_summary[filtered_summary["first_name"].isin(names_filter)]
-if phones_filter:
-    filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(phones_filter)]
-
-# Show summary with row selection enabled
-selected_rows = st.data_editor(
-    filtered_summary,
-    use_container_width=True,
-    hide_index=True,
-    disabled=True,  # make it read-only
-    num_rows="dynamic",
-    selection_mode="single-row"  # allow clicking one row
-)
-
-# If a row is selected, fetch related call details
-if selected_rows["selected_rows"]:
-    selected_idx = selected_rows["selected_rows"][0]
-    selected_phone = filtered_summary.iloc[selected_idx]["cleaned_phone"]
-
-    st.subheader(f"📋 Detailed Calls for {selected_phone}")
-    call_details = dialer[dialer["cleaned_phone"] == selected_phone][
-        ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
-    ]
-    st.dataframe(call_details, use_container_width=True)
-
-    # 📌 Select contact for details
-    selected_phone = st.selectbox(
-        "Select a contact to view detailed call logs",
-        options=filtered_summary["cleaned_phone"].unique()
+    dialer_summary = (
+        df_calls.groupby(["cleaned_phone", "first_name", "call status"])
+        .size()
+        .unstack(fill_value=0)
+        .reset_index()
+        .rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
     )
 
-    if selected_phone:
+    # Add filters
+    names_filter = st.multiselect(
+        "Filter by First Name(s)",
+        options=sorted(dialer_summary["first_name"].dropna().unique())
+    )
+
+    phones_filter = st.multiselect(
+        "Filter by Phone Number(s)",
+        options=sorted(dialer_summary["cleaned_phone"].dropna().unique())
+    )
+
+    filtered_summary = dialer_summary.copy()
+    if names_filter:
+        filtered_summary = filtered_summary[filtered_summary["first_name"].isin(names_filter)]
+    if phones_filter:
+        filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(phones_filter)]
+
+    # Row selection
+    selected_rows = st.data_editor(
+        filtered_summary,
+        use_container_width=True,
+        hide_index=True,
+        disabled=True,
+        num_rows="dynamic",
+        selection_mode="single-row"
+    )
+
+    # If a row is selected, show details
+    if selected_rows["selected_rows"]:
+        selected_idx = selected_rows["selected_rows"][0]
+        selected_phone = filtered_summary.iloc[selected_idx]["cleaned_phone"]
+
         st.subheader(f"📋 Detailed Calls for {selected_phone}")
-        call_details = df_calls[df_calls["cleaned_phone"] == selected_phone][
+        call_details = dialer[dialer["cleaned_phone"] == selected_phone][
             ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
         ]
-        st.dataframe(call_details)
+        st.dataframe(call_details, use_container_width=True)
 
     # =========================
     # Campaign Summary
@@ -1596,4 +1592,3 @@ if selected_rows["selected_rows"]:
     # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
-
