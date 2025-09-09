@@ -10,9 +10,6 @@ import streamlit as st
 # 📦 Paste your module here
 # =========================
 # Paste the full CALLING_CODE_TO_ISO and ISO_TO_CALLING_CODE dictionaries here
-# Example:
-CALLING_CODE_TO_ISO = {
-# Auto-generated global mapping of calling codes <-> ISO alpha-2
 CALLING_CODE_TO_ISO = {
   "1": [
     "US",
@@ -1399,15 +1396,6 @@ ISO_TO_CALLING_CODE = {
   ]
 }
 
-ISO_TO_CALLING_CODE = {
-    "US": ["1"],
-    "CA": ["1"],
-    "AG": ["1"],
-    "AI": ["1"],
-    "AS": ["1"],
-    # ... (paste the full dictionary)
-}
-
 # =========================
 # Helper functions
 # =========================
@@ -1596,3 +1584,4 @@ if crm_file and dialer_file:
     # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
