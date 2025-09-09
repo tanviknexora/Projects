@@ -7,7 +7,6 @@ import phonenumbers
 import streamlit as st
 
 # =========================
-
 # Auto-generated global mapping of calling codes <-> ISO alpha-2
 CALLING_CODE_TO_ISO = {
   "1": [
@@ -1395,6 +1394,7 @@ ISO_TO_CALLING_CODE = {
   ]
 }
 
+# =========================
 
 # =========================
 # Helper functions
@@ -1435,7 +1435,6 @@ def smart_parse(num):
     except:
         return None
     return None
-
 
 # =========================
 # Streamlit UI
@@ -1481,12 +1480,8 @@ if crm_file and dialer_file:
     dialer["total_duration_sec"] = dialer["answer_duration_sec"] + dialer["queue_sec"]
 
     # Format to hh:mm:ss
-    dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec"], unit="s").apply(
-        lambda x: str(x).split(".")[0]
-    )
-    dialer["total_duration_hms"] = pd.to_timedelta(dialer["total_duration_sec"], unit="s").apply(
-        lambda x: str(x).split(".")[0]
-    )
+    dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec'], unit="s").apply(lambda x: str(x).split(".")[0])
+    dialer["total_duration_hms"] = pd.to_timedelta(dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     dialer["answer_duration_hms"] = dialer["answer_duration_hms"].str.replace("0 days ", "", regex=False)
     dialer["total_duration_hms"] = dialer["total_duration_hms"].str.replace("0 days ", "", regex=False)
 
@@ -1506,8 +1501,6 @@ if crm_file and dialer_file:
     # =========================
     # Dialer Summary by Contact
     # =========================
-    st.subheader("Dialer Summary by Contact")
-
     dialer_summary = (
         df_calls.groupby(["cleaned_phone", "first_name", "call status"])
         .size()
@@ -1533,21 +1526,20 @@ if crm_file and dialer_file:
     if phones_filter:
         filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(phones_filter)]
 
-    # Row selection
-    selected_rows = st.data_editor(
-        filtered_summary,
-        use_container_width=True,
-        hide_index=True,
-        disabled=True,
-        num_rows="dynamic",
-        selection_mode="single-row"
+    # =========================
+    # Show summary table
+    # =========================
+    st.subheader("Dialer Summary by Contact")
+    st.dataframe(filtered_summary, use_container_width=True, hide_index=True)
+
+    # Add dropdown to select one record for details
+    selected_phone = st.selectbox(
+        "Select a contact to view detailed call logs",
+        options=filtered_summary["cleaned_phone"].unique()
     )
 
-    # If a row is selected, show details
-    if selected_rows["selected_rows"]:
-        selected_idx = selected_rows["selected_rows"][0]
-        selected_phone = filtered_summary.iloc[selected_idx]["cleaned_phone"]
-
+    # Show detailed call logs for the selected phone
+    if selected_phone:
         st.subheader(f"📋 Detailed Calls for {selected_phone}")
         call_details = dialer[dialer["cleaned_phone"] == selected_phone][
             ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
