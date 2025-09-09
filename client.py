@@ -1552,7 +1552,10 @@ if crm_file and dialer_file:
     )
 
 # Get selected phones
-selected_phones = selected_rows["cleaned_phone"].dropna().tolist() if selected_rows is not None else []
+if selected_rows is not None and "cleaned_phone" in selected_rows.columns:
+    selected_phones = selected_rows["cleaned_phone"].dropna().tolist()
+else:
+    selected_phones = []
 
 if selected_phones:
     call_details = df_calls[df_calls["cleaned_phone"].isin(selected_phones)][
@@ -1594,3 +1597,4 @@ else:
 
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
