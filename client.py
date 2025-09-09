@@ -6,10 +6,7 @@ import ast
 import phonenumbers
 import streamlit as st
 
-# =========================
-# 📦 Paste your module here
-# =========================
-# Paste the full CALLING_CODE_TO_ISO and ISO_TO_CALLING_CODE dictionaries here
+# Auto-generated global mapping of calling codes <-> ISO alpha-2
 CALLING_CODE_TO_ISO = {
   "1": [
     "US",
@@ -1396,6 +1393,7 @@ ISO_TO_CALLING_CODE = {
   ]
 }
 
+
 # =========================
 # Helper functions
 # =========================
@@ -1407,18 +1405,11 @@ def parse_utm(x):
     if isinstance(x, str):
         try:
             return ast.literal_eval(x)
-        except Exception:
+        except:
             return None
     return None
 
 sorted_prefixes = sorted(CALLING_CODE_TO_ISO.keys(), key=lambda x: -len(x))
-
-def detect_region(num):
-    num = str(num).lstrip("+")
-    for prefix in sorted_prefixes:
-        if num.startswith(prefix):
-            return CALLING_CODE_TO_ISO[prefix]
-    return None
 
 def smart_parse(num):
     s = str(num).strip()
@@ -1438,7 +1429,6 @@ def smart_parse(num):
 
 # =========================
 # Streamlit UI
-# =========================
 st.set_page_config(page_title="Call & CRM Analysis", layout="wide")
 st.title("📞 Call & CRM Connectivity Dashboard")
 
@@ -1458,12 +1448,14 @@ if crm_file and dialer_file:
         utm_df = pd.json_normalize(df["utm_hit"]).add_prefix("utm_hit_")
         df = pd.concat([df.drop(columns=["utm_hit"]), utm_df], axis=1)
 
+    df["cleaned_phone"] = df["phone"].apply(smart_parse)
+    
     # =========================
     # Dialer Data
     # =========================
     dialer = pd.read_excel(dialer_file)
     dialer.columns = dialer.columns.astype(str).str.lower()
-    dialer = dialer[['customer number','start time','queue duration','end time','call status']]
+    dialer = dialer[['customer number','account','start time','queue duration','end time','call status']]
 
     # Convert to datetime
     dialer["start time"] = pd.to_datetime(dialer["start time"])
@@ -1480,108 +1472,86 @@ if crm_file and dialer_file:
     dialer["total_duration_sec"] = dialer["answer_duration_sec"] + dialer["queue_sec"]
 
     # Format to hh:mm:ss
-    dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
-    dialer["total_duration_hms"] = pd.to_timedelta(dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
-    dialer["answer_duration_hms"] = dialer["answer_duration_hms"].str.replace("0 days ", "", regex=False)
-    dialer["total_duration_hms"] = dialer["total_duration_hms"].str.replace("0 days ", "", regex=False)
+    dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0]).str.replace("0 days ", "", regex=False)
+    dialer["total_duration_hms"] = pd.to_timedelta(dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0]).str.replace("0 days ", "", regex=False)
 
-    # Final cleanup
+    # Clean phone numbers
     dialer = dialer.rename(columns={'customer number':'cleaned_phone'})
-    dialer = dialer[['cleaned_phone','start time','end time','call status','answer_duration_hms','total_duration_hms']]
-
-    # =========================
-    # Phone Cleaning
-    # =========================
-    df["cleaned_phone"] = df["phone"].apply(smart_parse)
     dialer["cleaned_phone"] = dialer["cleaned_phone"].apply(smart_parse)
 
+    # =========================
+    # Merge CRM + Dialer
+    # =========================
     df_calls = df.merge(dialer, on="cleaned_phone", how="left")
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
 
+    # Ensure duration_sec exists
+    df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
+    df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
+
     # =========================
-    # Dialer Summary by Contact
+    # Dialer Summary (including account)
     # =========================
     dialer_summary = (
-        df_calls.groupby(["cleaned_phone", "first_name", "call status"])
-        .size()
-        .unstack(fill_value=0)
+        df_calls.groupby(["cleaned_phone", "first_name", "account"])
+        .agg(
+            answered_calls=("call status", lambda x: (x=="Answered").sum()),
+            missed_calls=("call status", lambda x: (x=="Missed").sum()),
+            total_duration_sec=("duration_sec","sum"),
+            answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index,"call status"]=="Answered"].sum())
+        )
         .reset_index()
-        .rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
     )
 
-    # Add filters
-    names_filter = st.multiselect(
-        "Filter by First Name(s)",
-        options=sorted(dialer_summary["first_name"].dropna().unique())
-    )
+    dialer_summary["answered_duration_hms"] = pd.to_timedelta(dialer_summary["answered_duration_sec"], unit="s").astype(str).str.split().str[-1]
+    dialer_summary["total_duration_hms"] = pd.to_timedelta(dialer_summary["total_duration_sec"], unit="s").astype(str).str.split().str[-1]
 
-    phones_filter = st.multiselect(
-        "Filter by Phone Number(s)",
-        options=sorted(dialer_summary["cleaned_phone"].dropna().unique())
-    )
+    dialer_summary = dialer_summary[
+        ["cleaned_phone","first_name","account","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]
+    ]
 
-    filtered_summary = dialer_summary.copy()
-    if names_filter:
-        filtered_summary = filtered_summary[filtered_summary["first_name"].isin(names_filter)]
-    if phones_filter:
-        filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(phones_filter)]
-
-    # =========================
-    # Show summary table
-    # =========================
     st.subheader("Dialer Summary by Contact")
-    st.dataframe(filtered_summary, use_container_width=True, hide_index=True)
+    st.dataframe(dialer_summary, use_container_width=True)
 
-    # Add dropdown to select one record for details
+    # =========================
+    # Multi-row selection (optional dropdown for details)
     selected_phone = st.selectbox(
         "Select a contact to view detailed call logs",
-        options=filtered_summary["cleaned_phone"].unique()
+        options=dialer_summary["cleaned_phone"].unique()
     )
-
-    # Show detailed call logs for the selected phone
     if selected_phone:
         st.subheader(f"📋 Detailed Calls for {selected_phone}")
-        call_details = dialer[dialer["cleaned_phone"] == selected_phone][
-            ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
+        call_details = df_calls[df_calls["cleaned_phone"]==selected_phone][
+            ["account","start time","end time","call status","answer_duration_hms","total_duration_hms"]
         ]
         st.dataframe(call_details, use_container_width=True)
 
     # =========================
     # Campaign Summary
-    # =========================
     st.subheader("Campaign Summary (Source + Campaign)")
     campaign_summary = (
         df_calls
-        .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone", "first_name", "call status"])
+        .groupby(["utm_hit_utmSource","utm_hit_utmCampaign","cleaned_phone","first_name","call status"])
         .size()
         .unstack(fill_value=0)
         .reset_index()
-        .rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
+        .rename(columns={"Answered":"answered_calls","Missed":"missed_calls"})
     )
     st.dataframe(campaign_summary)
 
     # =========================
     # Connectivity Rate by Source
-    # =========================
     st.subheader("Connectivity Rate by Source")
     source_connectivity = (
-        df_calls.groupby(["utm_hit_utmSource", "call status"])
+        df_calls.groupby(["utm_hit_utmSource","call status"])
         .size()
         .unstack(fill_value=0)
         .reset_index()
-        .rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
+        .rename(columns={"Answered":"answered_calls","Missed":"missed_calls"})
     )
-    source_connectivity["total_calls"] = (
-        source_connectivity["answered_calls"] + source_connectivity["missed_calls"]
-    )
-    source_connectivity["connectivity_rate"] = (
-        source_connectivity["answered_calls"] / source_connectivity["total_calls"]
-    ).round(2)
+    source_connectivity["total_calls"] = source_connectivity["answered_calls"] + source_connectivity["missed_calls"]
+    source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"]/source_connectivity["total_calls"]).round(2)
     st.dataframe(source_connectivity)
 
-    # =========================
-    # Chart
-    # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
-
