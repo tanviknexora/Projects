@@ -8,7 +8,6 @@ import streamlit as st
 
 # =========================
 # Calling code dictionary
-# (instead of importing calling_codes module)
 # =========================
 CALLING_CODE_TO_ISO = {
 "1": [
@@ -1394,7 +1393,6 @@ ISO_TO_CALLING_CODE = {
   "RU": [
     "7"
   ]
-
 }
 
 # =========================
@@ -1535,7 +1533,31 @@ if crm_file and dialer_file:
     dialer_summary = dialer_summary[
         ["cleaned_phone","first_name","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]
     ]
-    st.dataframe(dialer_summary)
+
+    # 🔎 Search filter
+    search_name = st.text_input("Search by First Name")
+    search_phone = st.text_input("Search by Phone Number")
+
+    filtered_summary = dialer_summary.copy()
+    if search_name:
+        filtered_summary = filtered_summary[filtered_summary["first_name"].str.contains(search_name, case=False, na=False)]
+    if search_phone:
+        filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].str.contains(search_phone, na=False)]
+
+    st.dataframe(filtered_summary)
+
+    # 📌 Select contact for details
+    selected_phone = st.selectbox(
+        "Select a contact to view detailed call logs",
+        options=filtered_summary["cleaned_phone"].unique()
+    )
+
+    if selected_phone:
+        st.subheader(f"📋 Detailed Calls for {selected_phone}")
+        call_details = df_calls[df_calls["cleaned_phone"] == selected_phone][
+            ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
+        ]
+        st.dataframe(call_details)
 
     # =========================
     # Campaign Summary
