@@ -1449,26 +1449,41 @@ if crm_file and dialer_file:
     # -------------------
     # Load Dialer
     # -------------------
-    Dialer = pd.read_excel(dialer_file)
-    Dialer.columns = Dialer.columns.str.lower()
-    Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
+    # =========================
+# Dialer Data Import & Preprocessing
+# =========================
+dialer_file = st.file_uploader("Upload Dialer Log Excel", type=["xlsx"])
+if dialer_file:
+    dialer = pd.read_excel(dialer_file)
+    dialer.columns = dialer.columns.str.lower()
     
-    Dialer["start time"] = pd.to_datetime(Dialer["start time"])
-    Dialer["end time"] = pd.to_datetime(Dialer["end time"])
-    Dialer["queue duration"] = pd.to_datetime(Dialer["queue duration"])
-
-    Dialer["answer_duration_sec"] = (Dialer["end time"] - Dialer["start time"]).dt.total_seconds()
-    Dialer["queue_sec"] = (
-        Dialer["queue duration"].dt.hour * 3600 +
-        Dialer["queue duration"].dt.minute * 60 +
-        Dialer["queue duration"].dt.second
+    # Keep only the relevant columns
+    dialer = dialer[['customer number','start time','queue duration','end time','call status']]
+    
+    # Convert to datetime
+    dialer["start time"] = pd.to_datetime(dialer["start time"])
+    dialer["end time"] = pd.to_datetime(dialer["end time"])
+    dialer["queue duration"] = pd.to_datetime(dialer["queue duration"])
+    
+    # Duration calculations
+    dialer["answer_duration_sec"] = (dialer["end time"] - dialer["start time"]).dt.total_seconds()
+    dialer["queue_sec"] = (
+        dialer["queue duration"].dt.hour * 3600
+        + dialer["queue duration"].dt.minute * 60
+        + dialer["queue duration"].dt.second
     )
-    Dialer["total_duration_sec"] = Dialer["answer_duration_sec"] + Dialer["queue_sec"]
+    dialer["total_duration_sec"] = dialer["answer_duration_sec"] + dialer["queue_sec"]
+    
+    # Format durations to hh:mm:ss
+    dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
+    dialer["total_duration_hms"] = pd.to_timedelta(dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
+    
+    # Clean column names for merge
+    dialer = dialer.rename(columns={'customer number': 'cleaned_phone'})
+    
+    # Create a copy to use later for detailed calls
+    dialer_for_details = dialer.copy()
 
-    Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
-    Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
-
-    Dialer = Dialer.rename(columns={'customer number':'cleaned_phone'})
     
     Dialer["cleaned_phone"] = Dialer["cleaned_phone"].apply(smart_parse)
 
@@ -1517,7 +1532,17 @@ if crm_file and dialer_file:
 
     st.subheader("Dialer Summary")
     st.dataframe(filtered_summary, use_container_width=True)
+    selected_phone = st.selectbox(
+        "Select a contact to view detailed call logs",
+        options=filtered_summary["cleaned_phone"].unique()
+    )
 
+    if selected_phone:
+        st.subheader(f"📋 Detailed Calls for {selected_phone}")
+        call_details = dialer_for_details[dialer_for_details["cleaned_phone"] == selected_phone][
+            ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
+        ]
+        st.dataframe(call_details, use_container_width=True)
     # -------------------
     # Detailed Call Logs
     # -------------------
@@ -1553,3 +1578,4 @@ if crm_file and dialer_file:
 
     st.subheader("Connectivity Chart")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
