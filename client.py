@@ -1429,6 +1429,7 @@ def smart_parse(num):
 
 # =========================
 # Streamlit UI
+# =========================
 st.set_page_config(page_title="Call & CRM Analysis", layout="wide")
 st.title("📞 Call & CRM Connectivity Dashboard")
 
@@ -1490,7 +1491,7 @@ if crm_file and dialer_file:
     df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
 
     # =========================
-    # Dialer Summary (including account)
+    # Dialer Summary by Contact (including account)
     # =========================
     dialer_summary = (
         df_calls.groupby(["cleaned_phone", "first_name", "account"])
@@ -1510,21 +1511,59 @@ if crm_file and dialer_file:
         ["cleaned_phone","first_name","account","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]
     ]
 
-    st.subheader("Dialer Summary by Contact")
-    st.dataframe(dialer_summary, use_container_width=True)
+    # =========================
+    # Filters
+    names_filter = st.multiselect(
+        "Filter by First Name(s)",
+        options=sorted(dialer_summary["first_name"].dropna().unique())
+    )
+    phones_filter = st.multiselect(
+        "Filter by Phone Number(s)",
+        options=sorted(dialer_summary["cleaned_phone"].dropna().unique())
+    )
+
+    filtered_summary = dialer_summary.copy()
+    if names_filter:
+        filtered_summary = filtered_summary[filtered_summary["first_name"].isin(names_filter)]
+    if phones_filter:
+        filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(phones_filter)]
 
     # =========================
-    # Multi-row selection (optional dropdown for details)
-    selected_phone = st.selectbox(
-        "Select a contact to view detailed call logs",
-        options=dialer_summary["cleaned_phone"].unique()
+    # Dialer Summary Table
+    st.subheader("Dialer Summary by Contact")
+    st.dataframe(filtered_summary, use_container_width=True, hide_index=True)
+
+    # =========================
+    # Detailed Call Logs (multi-select)
+    # =========================
+    st.subheader("📋 Detailed Calls for Selected Contacts")
+
+    # Use data_editor to allow multi-row selection
+    selected_rows = st.data_editor(
+        filtered_summary[["cleaned_phone", "first_name", "account"]],
+        column_config={
+            "cleaned_phone": st.column_config.TextColumn("Phone Number"),
+            "first_name": st.column_config.TextColumn("First Name"),
+            "account": st.column_config.TextColumn("Account"),
+        },
+        key="dialer_selection",
+        hide_index=True,
+        selection_mode="multi",
     )
-    if selected_phone:
-        st.subheader(f"📋 Detailed Calls for {selected_phone}")
-        call_details = df_calls[df_calls["cleaned_phone"]==selected_phone][
-            ["account","start time","end time","call status","answer_duration_hms","total_duration_hms"]
-        ]
-        st.dataframe(call_details, use_container_width=True)
+
+# Get selected phones
+selected_phones = selected_rows["cleaned_phone"].dropna().tolist() if selected_rows is not None else []
+
+if selected_phones:
+    call_details = df_calls[df_calls["cleaned_phone"].isin(selected_phones)][
+        ["account","start time","end time","call status","answer_duration_hms","total_duration_hms"]
+    ]
+    st.dataframe(call_details, use_container_width=True)
+else:
+    st.info("Select one or more contacts above to view detailed call logs.")
+
+    
+    
 
     # =========================
     # Campaign Summary
