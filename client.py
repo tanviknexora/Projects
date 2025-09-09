@@ -7,6 +7,11 @@ import phonenumbers
 import streamlit as st
 
 # =========================
+# 📦 Paste your module here
+# =========================
+# Paste the full CALLING_CODE_TO_ISO and ISO_TO_CALLING_CODE dictionaries here
+# Example:
+CALLING_CODE_TO_ISO = {
 # Auto-generated global mapping of calling codes <-> ISO alpha-2
 CALLING_CODE_TO_ISO = {
   "1": [
@@ -1394,7 +1399,14 @@ ISO_TO_CALLING_CODE = {
   ]
 }
 
-# =========================
+ISO_TO_CALLING_CODE = {
+    "US": ["1"],
+    "CA": ["1"],
+    "AG": ["1"],
+    "AI": ["1"],
+    "AS": ["1"],
+    # ... (paste the full dictionary)
+}
 
 # =========================
 # Helper functions
@@ -1480,7 +1492,7 @@ if crm_file and dialer_file:
     dialer["total_duration_sec"] = dialer["answer_duration_sec"] + dialer["queue_sec"]
 
     # Format to hh:mm:ss
-    dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec'], unit="s").apply(lambda x: str(x).split(".")[0])
+    dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     dialer["total_duration_hms"] = pd.to_timedelta(dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     dialer["answer_duration_hms"] = dialer["answer_duration_hms"].str.replace("0 days ", "", regex=False)
     dialer["total_duration_hms"] = dialer["total_duration_hms"].str.replace("0 days ", "", regex=False)
