@@ -4,6 +4,9 @@ import numpy as np
 import ast
 import phonenumbers
 
+# ======================================
+# ⚙️ Calling code mappings
+# ======================================
 # Auto-generated global mapping of calling codes <-> ISO alpha-2
 CALLING_CODE_TO_ISO = {
   "1": [
@@ -1393,7 +1396,7 @@ ISO_TO_CALLING_CODE = {
 
 
 # ======================================
-# ⚙️ Helper functions (from your code)
+# Helper functions
 # ======================================
 def parse_utm(x):
     if pd.isna(x):
@@ -1427,7 +1430,9 @@ def smart_parse(num):
 st.set_page_config(page_title="Call & CRM Dashboard", layout="wide")
 st.title("📞 Call & CRM Analysis")
 
+# -------------------
 # Upload files
+# -------------------
 crm_file = st.file_uploader("Upload CRM file", type=["xlsx"])
 dialer_file = st.file_uploader("Upload Dialer file", type=["xlsx"])
 
@@ -1449,18 +1454,11 @@ if crm_file and dialer_file:
     # -------------------
     # Load Dialer
     # -------------------
-    # =========================
-# Dialer Data Import & Preprocessing
-# =========================
-dialer_file = st.file_uploader("Upload Dialer Log Excel", type=["xlsx"])
-if dialer_file:
     dialer = pd.read_excel(dialer_file)
     dialer.columns = dialer.columns.str.lower()
-    
-    # Keep only the relevant columns
     dialer = dialer[['customer number','start time','queue duration','end time','call status']]
     
-    # Convert to datetime
+    # Convert datetime
     dialer["start time"] = pd.to_datetime(dialer["start time"])
     dialer["end time"] = pd.to_datetime(dialer["end time"])
     dialer["queue duration"] = pd.to_datetime(dialer["queue duration"])
@@ -1468,34 +1466,29 @@ if dialer_file:
     # Duration calculations
     dialer["answer_duration_sec"] = (dialer["end time"] - dialer["start time"]).dt.total_seconds()
     dialer["queue_sec"] = (
-        dialer["queue duration"].dt.hour * 3600
-        + dialer["queue duration"].dt.minute * 60
-        + dialer["queue duration"].dt.second
+        dialer["queue duration"].dt.hour * 3600 +
+        dialer["queue duration"].dt.minute * 60 +
+        dialer["queue duration"].dt.second
     )
     dialer["total_duration_sec"] = dialer["answer_duration_sec"] + dialer["queue_sec"]
     
-    # Format durations to hh:mm:ss
+    # Convert durations to hh:mm:ss
     dialer["answer_duration_hms"] = pd.to_timedelta(dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     dialer["total_duration_hms"] = pd.to_timedelta(dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     
-    # Clean column names for merge
+    # Rename for merge
     dialer = dialer.rename(columns={'customer number': 'cleaned_phone'})
-    
-    # Create a copy to use later for detailed calls
     dialer_for_details = dialer.copy()
 
-    
-    Dialer["cleaned_phone"] = Dialer["cleaned_phone"].apply(smart_parse)
-
     # -------------------
-    # Merge
+    # Merge CRM & Dialer
     # -------------------
-    df_calls = df_con.merge(Dialer, on="cleaned_phone", how="left")
+    df_calls = df_con.merge(dialer, on="cleaned_phone", how="left")
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
-
-    # Duration
+    
+    # Duration in seconds
     df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
-    df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
+    df_calls.loc[df_calls["call status"]=="Missed", "duration_sec"] = 0
 
     # -------------------
     # Dialer Summary
@@ -1530,8 +1523,15 @@ if dialer_file:
     if selected_phones:
         filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(selected_phones)]
 
+    # -------------------
+    # Display Dialer Summary
+    # -------------------
     st.subheader("Dialer Summary")
     st.dataframe(filtered_summary, use_container_width=True)
+
+    # -------------------
+    # Detailed Calls
+    # -------------------
     selected_phone = st.selectbox(
         "Select a contact to view detailed call logs",
         options=filtered_summary["cleaned_phone"].unique()
@@ -1539,17 +1539,9 @@ if dialer_file:
 
     if selected_phone:
         st.subheader(f"📋 Detailed Calls for {selected_phone}")
-        call_details = dialer_for_details[dialer_for_details["cleaned_phone"] == selected_phone][
+        call_details = dialer_for_details[dialer_for_details["cleaned_phone"]==selected_phone][
             ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
         ]
-        st.dataframe(call_details, use_container_width=True)
-    # -------------------
-    # Detailed Call Logs
-    # -------------------
-    selected_phone = st.selectbox("Select phone to view detailed calls", options=filtered_summary["cleaned_phone"].unique())
-    if selected_phone:
-        st.subheader(f"Detailed Calls for {selected_phone}")
-        call_details = df_calls[df_calls["cleaned_phone"]==selected_phone][["start time","end time","call status","answer_duration_hms","total_duration_hms"]]
         st.dataframe(call_details, use_container_width=True)
 
     # -------------------
@@ -1573,9 +1565,9 @@ if dialer_file:
     )
     source_connectivity["total_calls"] = source_connectivity["answered_calls"] + source_connectivity["missed_calls"]
     source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"]/source_connectivity["total_calls"]).round(2)
+    
     st.subheader("Connectivity Rate by Source")
     st.dataframe(source_connectivity)
-
+    
     st.subheader("Connectivity Chart")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
-
