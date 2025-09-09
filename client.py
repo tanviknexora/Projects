@@ -1503,48 +1503,47 @@ if crm_file and dialer_file:
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
 
     # =========================
-    # Dialer Summary by Contact
-    # =========================
-    st.subheader("Dialer Summary by Contact")
+# Dialer Summary by Contact
+# =========================
+st.subheader("Dialer Summary by Contact")
 
-    df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
-    df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
+# Add filters (multiselect)
+names_filter = st.multiselect(
+    "Filter by First Name(s)",
+    options=sorted(dialer_summary["first_name"].dropna().unique())
+)
 
-    dialer_summary = (
-        df_calls
-        .groupby(["cleaned_phone", "first_name"])
-        .agg(
-            answered_calls=("call status", lambda x: (x == "Answered").sum()),
-            missed_calls=("call status", lambda x: (x == "Missed").sum()),
-            total_duration_sec=("duration_sec", "sum"),
-            answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index, "call status"] == "Answered"].sum())
-        )
-        .reset_index()
-    )
+phones_filter = st.multiselect(
+    "Filter by Phone Number(s)",
+    options=sorted(dialer_summary["cleaned_phone"].dropna().unique())
+)
 
-    dialer_summary["answered_duration_hms"] = pd.to_timedelta(
-        dialer_summary["answered_duration_sec"], unit="s"
-    ).astype(str).str.split().str[-1]
+filtered_summary = dialer_summary.copy()
+if names_filter:
+    filtered_summary = filtered_summary[filtered_summary["first_name"].isin(names_filter)]
+if phones_filter:
+    filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(phones_filter)]
 
-    dialer_summary["total_duration_hms"] = pd.to_timedelta(
-        dialer_summary["total_duration_sec"], unit="s"
-    ).astype(str).str.split().str[-1]
+# Show summary with row selection enabled
+selected_rows = st.data_editor(
+    filtered_summary,
+    use_container_width=True,
+    hide_index=True,
+    disabled=True,  # make it read-only
+    num_rows="dynamic",
+    selection_mode="single-row"  # allow clicking one row
+)
 
-    dialer_summary = dialer_summary[
-        ["cleaned_phone","first_name","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]
+# If a row is selected, fetch related call details
+if selected_rows["selected_rows"]:
+    selected_idx = selected_rows["selected_rows"][0]
+    selected_phone = filtered_summary.iloc[selected_idx]["cleaned_phone"]
+
+    st.subheader(f"📋 Detailed Calls for {selected_phone}")
+    call_details = dialer[dialer["cleaned_phone"] == selected_phone][
+        ["start time","end time","call status","answer_duration_hms","total_duration_hms"]
     ]
-
-    # 🔎 Search filter
-    search_name = st.text_input("Search by First Name")
-    search_phone = st.text_input("Search by Phone Number")
-
-    filtered_summary = dialer_summary.copy()
-    if search_name:
-        filtered_summary = filtered_summary[filtered_summary["first_name"].str.contains(search_name, case=False, na=False)]
-    if search_phone:
-        filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].str.contains(search_phone, na=False)]
-
-    st.dataframe(filtered_summary)
+    st.dataframe(call_details, use_container_width=True)
 
     # 📌 Select contact for details
     selected_phone = st.selectbox(
@@ -1597,3 +1596,4 @@ if crm_file and dialer_file:
     # =========================
     st.subheader("📊 Connectivity Rate by Source (Chart)")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
