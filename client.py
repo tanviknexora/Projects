@@ -1531,10 +1531,27 @@ if crm_file and dialer_file:
     # Campaign Summary
     # -------------------
     campaign_summary = (
-        df_calls.groupby(["utm_hit_utmSource","utm_hit_utmCampaign","cleaned_phone","first_name","call status"])
-        .size().unstack(fill_value=0).reset_index()
-        .rename(columns={"Answered":"answered_calls","Missed":"missed_calls"})
+        # Campaign Summary
+campaign_summary = (
+    df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"])
+    .agg(
+        total_calls=("call status", "size"),
+        unique_clients=("cleaned_phone", "nunique")
     )
+    .reset_index()
+    .pivot_table(
+        index=["utm_hit_utmSource", "utm_hit_utmCampaign"],
+        columns="call status",
+        values=["total_calls", "unique_clients"],
+        fill_value=0
+    )
+)
+
+campaign_summary.columns = ['_'.join(col).strip() for col in campaign_summary.columns.values]
+campaign_summary = campaign_summary.reset_index()
+
+
+
     st.subheader("Campaign Summary")
     st.dataframe(campaign_summary)
 
@@ -1553,3 +1570,4 @@ if crm_file and dialer_file:
 
     st.subheader("Connectivity Chart")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
