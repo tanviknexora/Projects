@@ -1481,6 +1481,63 @@ if crm_file and dialer_file:
     # Duration
     df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
     df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
+        # -------------------
+    # Campaign Lead Engagement Summary
+    # -------------------
+
+    # Step 1: Get lead call outcomes
+    lead_status = (
+        df_calls.groupby("cleaned_phone")["call status"]
+        .apply(list)
+        .reset_index()
+    )
+
+    def classify_status(calls):
+        if "Answered" in calls:
+            return "answered"
+        elif "Missed" in calls:
+            return "unanswered"
+        else:
+            return "unknown"
+
+    lead_status["lead_status"] = lead_status["call status"].apply(classify_status)
+
+    # Step 2: Attach campaign info
+    calls_campaign = df_calls[["cleaned_phone", "utm_hit_utmSource", "utm_hit_utmCampaign"]].drop_duplicates()
+    calls_campaign = calls_campaign.merge(
+        lead_status[["cleaned_phone", "lead_status"]],
+        on="cleaned_phone",
+        how="left"
+    )
+
+    # Step 3: Aggregate at campaign level
+    campaign_summary = (
+        df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])
+        .agg(total_leads=("cleaned_phone", "nunique"))
+        .reset_index()
+    )
+
+    status_counts = (
+        calls_campaign.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "lead_status"])
+        .agg(unique_leads=("cleaned_phone", "nunique"))
+        .reset_index()
+        .pivot(index=["utm_hit_utmSource", "utm_hit_utmCampaign"], 
+               columns="lead_status", 
+               values="unique_leads")
+        .reset_index()
+        .fillna(0)
+    )
+
+    campaign_summary = campaign_summary.merge(status_counts, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
+
+    # Step 4: Calculate untouched
+    campaign_summary["untouched_leads"] = campaign_summary["total_leads"] - (
+        campaign_summary.get("answered", 0) + campaign_summary.get("unanswered", 0)
+    )
+
+    # Display in Streamlit
+    st.subheader("Campaign Lead Engagement (Corrected)")
+    st.dataframe(campaign_summary, use_container_width=True)
 
     # -------------------
     # Dialer Summary
@@ -1569,8 +1626,8 @@ if crm_file and dialer_file:
         # Lead Source Engagement Summary
         # -------------------
         # -------------------
-    # Campaign Lead Engagement Summary
-    # -------------------
+        # Campaign Lead Engagement Summary
+        # -------------------
     if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
         # Total leads per campaign
         campaign_leads = (
@@ -1602,6 +1659,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
