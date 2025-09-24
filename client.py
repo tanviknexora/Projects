@@ -1565,9 +1565,42 @@ if crm_file and dialer_file:
     source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"]/source_connectivity["total_calls"]).round(2)
     st.subheader("Connectivity Rate by Source")
     st.dataframe(source_connectivity)
+        # -------------------
+    # Lead Source Engagement Summary
+    # -------------------
+    if "lead_source" in df_con.columns:
+        lead_source_summary = (
+            df_con.groupby("lead_source")
+            .agg(total_leads=("cleaned_phone", "nunique"))
+            .reset_index()
+        )
+
+        # Leads with at least one dial
+        dialled_leads = df_calls.groupby("lead_source")["cleaned_phone"].nunique().reset_index(name="dialled_leads")
+        answered_leads = df_calls[df_calls["call status"]=="Answered"].groupby("lead_source")["cleaned_phone"].nunique().reset_index(name="answered_leads")
+        missed_leads = df_calls[df_calls["call status"]=="Missed"].groupby("lead_source")["cleaned_phone"].nunique().reset_index(name="missed_leads")
+
+        # Merge all
+        lead_source_summary = (
+            lead_source_summary
+            .merge(dialled_leads, on="lead_source", how="left")
+            .merge(answered_leads, on="lead_source", how="left")
+            .merge(missed_leads, on="lead_source", how="left")
+        )
+
+        # Fill NaN with 0
+        lead_source_summary = lead_source_summary.fillna(0)
+
+        # Calculate untouched leads
+        lead_source_summary["untouched_leads"] = lead_source_summary["total_leads"] - lead_source_summary["dialled_leads"]
+
+        # Show in Streamlit
+        st.subheader("Lead Source Engagement")
+        st.dataframe(lead_source_summary, use_container_width=True)
 
     st.subheader("Connectivity Chart")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
