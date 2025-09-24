@@ -1600,6 +1600,59 @@ if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.col
     st.dataframe(campaign_engagement, use_container_width=True)
 
     # -------------------
+# Campaign Engagement Summary (paste here)
+# -------------------
+if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
+    total_leads = (
+        df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
+        .nunique()
+        .reset_index(name="total_leads")
+    )
+
+    dialled_leads = (
+        df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
+        .nunique()
+        .reset_index(name="dialled_leads")
+    )
+
+    answered_leads = (
+        df_calls[df_calls["call status"]=="Answered"]
+        .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
+        .nunique()
+        .reset_index(name="answered_leads")
+    )
+
+    missed_leads = (
+        df_calls[df_calls["call status"]=="Missed"]
+        .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
+        .nunique()
+        .reset_index(name="missed_leads")
+    )
+
+    campaign_engagement = (
+        total_leads
+        .merge(dialled_leads, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+        .merge(answered_leads, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+        .merge(missed_leads, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+        .fillna(0)
+    )
+
+    campaign_engagement["untouched_leads"] = (
+        campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
+    )
+
+    campaign_engagement["contact_rate_%"] = (
+        (campaign_engagement["dialled_leads"] / campaign_engagement["total_leads"]) * 100
+    ).round(1)
+
+    campaign_engagement["answer_rate_%"] = campaign_engagement.apply(
+        lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
+        axis=1
+    ).round(1)
+
+    st.subheader("📊 Campaign Engagement Summary")
+    st.dataframe(campaign_engagement, use_container_width=True)
+    # -------------------
     # Dialer Summary
     # -------------------
     dialer_summary = (
@@ -1719,6 +1772,7 @@ if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.col
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
