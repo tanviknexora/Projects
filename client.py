@@ -1568,38 +1568,41 @@ if crm_file and dialer_file:
         # -------------------
     # Lead Source Engagement Summary
     # -------------------
-    if "lead_source" in df_con.columns:
-        lead_source_summary = (
-            df_con.groupby("lead_source")
-            .agg(total_leads=("cleaned_phone", "nunique"))
-            .reset_index()
-        )
+    # -------------------
+# Campaign Lead Engagement Summary
+# -------------------
+if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
+    # Total leads per campaign
+    campaign_leads = (
+        df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])
+        .agg(total_leads=("cleaned_phone", "nunique"))
+        .reset_index()
+    )
 
-        # Leads with at least one dial
-        dialled_leads = df_calls.groupby("lead_source")["cleaned_phone"].nunique().reset_index(name="dialled_leads")
-        answered_leads = df_calls[df_calls["call status"]=="Answered"].groupby("lead_source")["cleaned_phone"].nunique().reset_index(name="answered_leads")
-        missed_leads = df_calls[df_calls["call status"]=="Missed"].groupby("lead_source")["cleaned_phone"].nunique().reset_index(name="missed_leads")
+    # Dialled leads per campaign
+    dialled = df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="dialled_leads")
+    answered = df_calls[df_calls["call status"]=="Answered"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="answered_leads")
+    missed = df_calls[df_calls["call status"]=="Missed"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="missed_leads")
 
-        # Merge all
-        lead_source_summary = (
-            lead_source_summary
-            .merge(dialled_leads, on="lead_source", how="left")
-            .merge(answered_leads, on="lead_source", how="left")
-            .merge(missed_leads, on="lead_source", how="left")
-        )
+    # Merge all together
+    campaign_summary_table = (
+        campaign_leads
+        .merge(dialled, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+        .merge(answered, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+        .merge(missed, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+        .fillna(0)
+    )
 
-        # Fill NaN with 0
-        lead_source_summary = lead_source_summary.fillna(0)
+    # Calculate untouched leads
+    campaign_summary_table["untouched_leads"] = campaign_summary_table["total_leads"] - campaign_summary_table["dialled_leads"]
 
-        # Calculate untouched leads
-        lead_source_summary["untouched_leads"] = lead_source_summary["total_leads"] - lead_source_summary["dialled_leads"]
-
-        # Show in Streamlit
-        st.subheader("Lead Source Engagement")
-        st.dataframe(lead_source_summary, use_container_width=True)
-
+    # Display in Streamlit
+    st.subheader("Campaign Lead Engagement Summary")
+    st.dataframe(campaign_summary_table, use_container_width=True)
+  
     st.subheader("Connectivity Chart")
     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
