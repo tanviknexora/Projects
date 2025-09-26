@@ -1521,19 +1521,36 @@ if crm_file and dialer_file:
             .reset_index(name="dialled_leads")
         )
 
-        answered_leads = (
-            df_calls[df_calls["call status"]=="Answered"]
-            .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
-            .nunique()
-            .reset_index(name="answered_leads")
-        )
+        # For each source/campaign & phone, determine the HIGHEST call status
+    def classify_status(gr):
+        if 'Answered' in gr.values:
+            return 'Answered'
+        elif 'Missed' in gr.values:
+            return 'Missed'
+        else:
+            return 'None'
 
-        missed_leads = (
-            df_calls[df_calls["call status"]=="Missed"]
-            .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
-            .nunique()
-            .reset_index(name="missed_leads")
-        )
+    lead_status = (
+        df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone"])["call status"]
+        .agg(classify_status)
+        .reset_index()
+    )
+
+    summary = (
+        lead_status
+        .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"])["cleaned_phone"]
+        .nunique()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
+    summary = summary.rename(columns={'Answered': 'answered_leads', 'Missed': 'missed_leads', 'None': 'other_leads'})
+    summary["dialled_leads"] = summary.get('answered_leads', 0) + summary.get('missed_leads', 0)
+
+    # Get total and untouched leads
+    total_leads = df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="total_leads")
+    campaign_engagement = total_leads.merge(summary, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
+    campaign_engagement["untouched_leads"] = campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
+
 
         campaign_engagement = (
             total_leads
@@ -1653,6 +1670,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
