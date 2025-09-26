@@ -1482,7 +1482,29 @@ if crm_file and dialer_file:
     df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
     df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
     
+    # These are the unique numbers loaded in CRM
+    crm_unique_phones = set(df_con["cleaned_phone"].dropna().unique())
 
+    # These are the unique numbers dialled at least once (including missed or answered)
+    dialled_unique_phones = set(Dialer["cleaned_phone"].dropna().unique())
+
+    # Untouched = in CRM but never dialled
+    untouched_phones = crm_unique_phones - dialled_unique_phones
+
+    # Contacted = dialled at least once
+    contacted_phones = dialled_unique_phones
+
+    # For campaign summary, show actual unique phone numbers for contacted/untouched leads
+    df_con["contacted"] = df_con["cleaned_phone"].isin(contacted_phones)
+    df_con["untouched"] = df_con["cleaned_phone"].isin(untouched_phones)
+
+    # Then for each campaign
+    campaign_contacted = df_con[df_con["contacted"]].groupby(
+        ["utm_hit_utmSource", "utm_hit_utmCampaign"]
+    )["cleaned_phone"].unique().reset_index(name="contacted_leads")
+    campaign_untouched = df_con[df_con["untouched"]].groupby(
+        ["utm_hit_utmSource", "utm_hit_utmCampaign"]
+    )["cleaned_phone"].unique().reset_index(name="untouched_leads")
     # -------------------
     # Campaign Engagement Summary (paste here)
     # -------------------
@@ -1631,6 +1653,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
