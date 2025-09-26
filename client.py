@@ -1551,19 +1551,6 @@ if crm_file and dialer_file:
         campaign_engagement = total_leads.merge(summary, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
         campaign_engagement["untouched_leads"] = campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
 
-
-        campaign_engagement = (
-            total_leads
-            .merge(dialled_leads, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
-            .merge(answered_leads, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
-            .merge(missed_leads, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
-            .fillna(0)
-        )
-
-        campaign_engagement["untouched_leads"] = (
-            campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
-        )
-
         campaign_engagement["contact_rate_%"] = (
             (campaign_engagement["dialled_leads"] / campaign_engagement["total_leads"]) * 100
         ).round(1)
@@ -1670,6 +1657,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
