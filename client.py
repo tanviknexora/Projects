@@ -1532,13 +1532,13 @@ if crm_file and dialer_file:
     # -------------------
     if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
         total_leads = (
-            df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
+            df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
             .nunique()
             .reset_index(name="total_leads")
         )
 
         dialled_leads = (
-            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"]
+            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
             .nunique()
             .reset_index(name="dialled_leads")
         )
@@ -1553,14 +1553,14 @@ if crm_file and dialer_file:
                 return 'None'
 
         lead_status = (
-            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone"])["call status"]
+            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone"],dropna='False')["call status"]
             .agg(classify_status)
             .reset_index()
         )
 
         summary = (
             lead_status
-            .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"])["cleaned_phone"]
+            .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"],dropna='False')["cleaned_phone"]
             .nunique()
             .unstack(fill_value=0)
             .reset_index()
@@ -1679,6 +1679,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
