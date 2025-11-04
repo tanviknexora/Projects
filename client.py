@@ -1569,7 +1569,7 @@ if crm_file and dialer_file:
         summary["dialled_leads"] = summary.get('answered_leads', 0) + summary.get('missed_leads', 0)
 
         # Get total and untouched leads
-        total_leads = df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="total_leads")
+        total_leads = df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="total_leads")
         campaign_engagement = total_leads.merge(summary, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
         campaign_engagement["untouched_leads"] = campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
 
@@ -1651,15 +1651,15 @@ if crm_file and dialer_file:
     if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
         # Total leads per campaign
         campaign_leads = (
-            df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])
+            df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)
             .agg(total_leads=("cleaned_phone", "nunique"))
             .reset_index()
         )
 
         # Dialled leads per campaign
-        dialled = df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="dialled_leads")
-        answered = df_calls[df_calls["call status"]=="Answered"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="answered_leads")
-        missed = df_calls[df_calls["call status"]=="Missed"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"])["cleaned_phone"].nunique().reset_index(name="missed_leads")
+        dialled = df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="dialled_leads")
+        answered = df_calls[df_calls["call status"]=="Answered"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="answered_leads")
+        missed = df_calls[df_calls["call status"]=="Missed"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="missed_leads")
 
         # Merge all together
         campaign_summary_table = (
@@ -1679,6 +1679,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
