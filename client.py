@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import ast
 import phonenumbers
+import re
+import math
 
 # Auto-generated global mapping of calling codes <-> ISO alpha-2
 CALLING_CODE_TO_ISO = {
@@ -1408,17 +1410,37 @@ def parse_utm(x):
     return None
 
 def smart_parse(num):
-    s = str(num).strip()
-    if not s:
+    if num is None:
         return None
-    if not s.startswith("+"):
+    if isinstance(num, float) and math.isnan(num):
+        return None
+
+    # Handle floats (including scientific notation) by converting to int string
+    if isinstance(num, float):
+        try:
+            s = str(int(num))
+        except:
+            return None
+    else:
+        s = str(num).strip()
+
+    # Remove non-digits for digit count
+    digits_only = re.sub(r'\D', '', s)
+
+    # If exactly 10 digits and no '+' prefix, assume Indian local number and prepend +91
+    if len(digits_only) == 10 and not s.startswith("+"):
+        s = "+91" + digits_only
+    elif not s.startswith("+"):
         s = "+" + s
+
     try:
         parsed = phonenumbers.parse(s, None)
         if phonenumbers.is_valid_number(parsed):
+            # Format as E164 and remove '+'
             return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164).replace("+", "")
     except:
         return None
+
     return None
 
 # ======================================
@@ -1657,6 +1679,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
