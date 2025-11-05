@@ -1587,19 +1587,19 @@ if crm_file and dialer_file:
         # -------------------
         # Dialer Summary
         # -------------------
-        dialer_summary = (
-            df_calls.groupby(["cleaned_phone","first_name","account"])
-            .agg(
-                answered_calls=("call status", lambda x: (x=="Answered").sum()),
-                missed_calls=("call status", lambda x: (x=="Missed").sum()),
-                total_duration_sec=("duration_sec","sum"),
-                answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index,"call status"]=="Answered"].sum())
-            ).reset_index()
-        )
+    dialer_summary = (
+        df_calls.groupby(["cleaned_phone","first_name","account"])
+        .agg(
+             answered_calls=("call status", lambda x: (x=="Answered").sum()),
+             missed_calls=("call status", lambda x: (x=="Missed").sum()),
+             total_duration_sec=("duration_sec","sum"),
+             answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index,"call status"]=="Answered"].sum())
+         ).reset_index()
+    )
 
-        dialer_summary["answered_duration_hms"] = pd.to_timedelta(dialer_summary["answered_duration_sec"], unit="s").astype(str).str.split().str[-1]
-        dialer_summary["total_duration_hms"] = pd.to_timedelta(dialer_summary["total_duration_sec"], unit="s").astype(str).str.split().str[-1]
-        dialer_summary = dialer_summary[["cleaned_phone","first_name","account","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]]
+    dialer_summary["answered_duration_hms"] = pd.to_timedelta(dialer_summary["answered_duration_sec"], unit="s").astype(str).str.split().str[-1]
+    dialer_summary["total_duration_hms"] = pd.to_timedelta(dialer_summary["total_duration_sec"], unit="s").astype(str).str.split().str[-1]
+    dialer_summary = dialer_summary[["cleaned_phone","first_name","account","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]]
 
     # -------------------
     # Filters
@@ -1679,6 +1679,7 @@ if crm_file and dialer_file:
   
         st.subheader("Connectivity Chart")
         st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
