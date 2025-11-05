@@ -1530,72 +1530,72 @@ if crm_file and dialer_file:
     # -------------------
     # Campaign Engagement Summary (paste here)
     # -------------------
-    # if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
-    #     total_leads = (
-    #         df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
-    #         .nunique()
-    #         .reset_index(name="total_leads")
-    #     )
+    if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
+        total_leads = (
+            df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
+            .nunique()
+            .reset_index(name="total_leads")
+        )
 
-    #     dialled_leads = (
-    #         df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
-    #         .nunique()
-    #         .reset_index(name="dialled_leads")
-    #     )
+        dialled_leads = (
+            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
+            .nunique()
+            .reset_index(name="dialled_leads")
+        )
 
-    #     # For each source/campaign & phone, determine the HIGHEST call status
-    #     def classify_status(gr):
-    #         if 'Answered' in gr.values:
-    #             return 'Answered'
-    #         elif 'Missed' in gr.values:
-    #             return 'Missed'
-    #         else:
-    #             return 'None'
+        # For each source/campaign & phone, determine the HIGHEST call status
+        def classify_status(gr):
+            if 'Answered' in gr.values:
+                return 'Answered'
+            elif 'Missed' in gr.values:
+                return 'Missed'
+            else:
+                return 'None'
 
-    #     lead_status = (
-    #         df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone"],dropna='False')["call status"]
-    #         .agg(classify_status)
-    #         .reset_index()
-    #     )
+        lead_status = (
+            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone"],dropna='False')["call status"]
+            .agg(classify_status)
+            .reset_index()
+        )
 
-    #     summary = (
-    #         lead_status
-    #         .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"],dropna='False')["cleaned_phone"]
-    #         .nunique()
-    #         .unstack(fill_value=0)
-    #         .reset_index()
-    #     )
-    #     summary = summary.rename(columns={'Answered': 'answered_leads', 'Missed': 'missed_leads', 'None': 'other_leads'})
-    #     summary["dialled_leads"] = summary.get('answered_leads', 0) + summary.get('missed_leads', 0)
+        summary = (
+            lead_status
+            .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"],dropna='False')["cleaned_phone"]
+            .nunique()
+            .unstack(fill_value=0)
+            .reset_index()
+        )
+        summary = summary.rename(columns={'Answered': 'answered_leads', 'Missed': 'missed_leads', 'None': 'other_leads'})
+        summary["dialled_leads"] = summary.get('answered_leads', 0) + summary.get('missed_leads', 0)
 
-    #     # Get total and untouched leads
-    #     total_leads = df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="total_leads")
-    #     campaign_engagement = total_leads.merge(summary, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
-    #     campaign_engagement["untouched_leads"] = campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
+        # Get total and untouched leads
+        total_leads = df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="total_leads")
+        campaign_engagement = total_leads.merge(summary, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
+        campaign_engagement["untouched_leads"] = campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
 
-    #     campaign_engagement["contact_rate_%"] = (
-    #         (campaign_engagement["dialled_leads"] / campaign_engagement["total_leads"]) * 100
-    #     ).round(1)
+        campaign_engagement["contact_rate_%"] = (
+            (campaign_engagement["dialled_leads"] / campaign_engagement["total_leads"]) * 100
+        ).round(1)
 
-    #     campaign_engagement["answer_rate_%"] = campaign_engagement.apply(
-    #         lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
-    #         axis=1
-    #     ).round(1)
+        campaign_engagement["answer_rate_%"] = campaign_engagement.apply(
+            lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
+            axis=1
+        ).round(1)
 
-    #     st.subheader("📊 Campaign Engagement Summary")
-    #     st.dataframe(campaign_engagement, use_container_width=True)
+        st.subheader("📊 Campaign Engagement Summary")
+        st.dataframe(campaign_engagement, use_container_width=True)
         # -------------------
         # Dialer Summary
         # -------------------
-    dialer_summary = (
-        df_calls.groupby(["cleaned_phone","first_name","account"])
-        .agg(
-             answered_calls=("call status", lambda x: (x=="Answered").sum()),
-             missed_calls=("call status", lambda x: (x=="Missed").sum()),
-             total_duration_sec=("duration_sec","sum"),
-             answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index,"call status"]=="Answered"].sum())
-         ).reset_index()
-    )
+      dialer_summary = (
+          df_calls.groupby(["cleaned_phone","first_name","account"])
+          .agg(
+               answered_calls=("call status", lambda x: (x=="Answered").sum()),
+               missed_calls=("call status", lambda x: (x=="Missed").sum()),
+               total_duration_sec=("duration_sec","sum"),
+               answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index,"call status"]=="Answered"].sum())
+           ).reset_index()
+      )
 
     dialer_summary["answered_duration_hms"] = pd.to_timedelta(dialer_summary["answered_duration_sec"], unit="s").astype(str).str.split().str[-1]
     dialer_summary["total_duration_hms"] = pd.to_timedelta(dialer_summary["total_duration_sec"], unit="s").astype(str).str.split().str[-1]
@@ -1642,43 +1642,42 @@ if crm_file and dialer_file:
     source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"]/source_connectivity["total_calls"]).round(2)
     st.subheader("Connectivity Rate by Source")
     st.dataframe(source_connectivity)
-        # -------------------
-        # Lead Source Engagement Summary
-        # -------------------
+        
         # -------------------
         # Campaign Lead Engagement Summary
         # -------------------
-    if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
-        # Total leads per campaign
-        campaign_leads = (
-            df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)
-            .agg(total_leads=("cleaned_phone", "nunique"))
-            .reset_index()
-        )
+    # if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
+    #     # Total leads per campaign
+    #     campaign_leads = (
+    #         df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)
+    #         .agg(total_leads=("cleaned_phone", "nunique"))
+    #         .reset_index()
+    #     )
 
-        # Dialled leads per campaign
-        dialled = df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="dialled_leads")
-        answered = df_calls[df_calls["call status"]=="Answered"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="answered_leads")
-        missed = df_calls[df_calls["call status"]=="Missed"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="missed_leads")
+    #     # Dialled leads per campaign
+    #     dialled = df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="dialled_leads")
+    #     answered = df_calls[df_calls["call status"]=="Answered"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="answered_leads")
+    #     missed = df_calls[df_calls["call status"]=="Missed"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="missed_leads")
 
-        # Merge all together
-        campaign_summary_table = (
-            campaign_leads
-            .merge(dialled, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
-            .merge(answered, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
-            .merge(missed, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
-            .fillna(0)
-        )
+    #     # Merge all together
+    #     campaign_summary_table = (
+    #         campaign_leads
+    #         .merge(dialled, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+    #         .merge(answered, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+    #         .merge(missed, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+    #         .fillna(0)
+    #     )
 
-        # Calculate untouched leads
-        campaign_summary_table["untouched_leads"] = campaign_summary_table["total_leads"] - campaign_summary_table["dialled_leads"]
+    #     # Calculate untouched leads
+    #     campaign_summary_table["untouched_leads"] = campaign_summary_table["total_leads"] - campaign_summary_table["dialled_leads"]
 
-        # Display in Streamlit
-        st.subheader("Campaign Lead Engagement Summary")
-        st.dataframe(campaign_summary_table, use_container_width=True)
+    #     # Display in Streamlit
+    #     st.subheader("Campaign Lead Engagement Summary")
+    #     st.dataframe(campaign_summary_table, use_container_width=True)
   
-        st.subheader("Connectivity Chart")
-        st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+    #     st.subheader("Connectivity Chart")
+    #     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
