@@ -1520,6 +1520,7 @@ def extract_last_10_digits(num):
     Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
 
+    Dialer["cleaned_phone"] = Dialer["customer number"].apply(extract_last_10_digits)
     Dialer = Dialer.rename(columns={'customer number':'cleaned_phone'})
     
     Dialer["cleaned_phone"] = Dialer["customer number"].apply(extract_last_10_digits)
@@ -1706,6 +1707,7 @@ def extract_last_10_digits(num):
   
     #     st.subheader("Connectivity Chart")
     #     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
