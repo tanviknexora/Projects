@@ -1465,46 +1465,20 @@ if crm_file and dialer_file:
         df_con = pd.concat([df.drop(columns=["utm_hit"]), utm_df], axis=1)
     else:
         df_con = df.copy()
-      
-    def extract_last_10_digits(num):
-      if pd.isna(num):
-        return None
-      s = str(num)
-      digits_only = re.sub(r'\D', '', s)  # Remove non-digits
-      if len(digits_only) < 10:
-        return None
-      return digits_only[-10:]  # Last 10 digits
-  
-    df_con["cleaned_phone"] = df_con["phone"].apply(extract_last_10_digits)
+    
+    df_con["cleaned_phone"] = df_con["phone"].apply(smart_parse)
 
     # -------------------
     # Load Dialer
     # -------------------
-Dialer = pd.read_excel(dialer_file)
-Dialer.columns = Dialer.columns.str.lower()
-Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
-
-# Extract last 10 digits from "customer number" BEFORE renaming or dropping columns
-def extract_last_10_digits(num):
-    if pd.isna(num):
-        return None
-    s = str(num)
-    digits_only = re.sub(r'\D', '', s)  # Remove all non-digit characters
-    if len(digits_only) < 10:
-        return None
-    return digits_only[-10:]  # last 10 digits
-
-    Dialer["cleaned_phone"] = Dialer["customer number"].apply(extract_last_10_digits)
-
-    # Optionally drop original column if no longer needed
-    Dialer = Dialer.drop(columns=["customer number"])
-
-    # Convert datetime columns
+    Dialer = pd.read_excel(dialer_file)
+    Dialer.columns = Dialer.columns.str.lower()
+    Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
+    
     Dialer["start time"] = pd.to_datetime(Dialer["start time"])
     Dialer["end time"] = pd.to_datetime(Dialer["end time"])
     Dialer["queue duration"] = pd.to_datetime(Dialer["queue duration"])
 
-    # Calculate durations
     Dialer["answer_duration_sec"] = (Dialer["end time"] - Dialer["start time"]).dt.total_seconds()
     Dialer["queue_sec"] = (
         Dialer["queue duration"].dt.hour * 3600 +
@@ -1516,14 +1490,10 @@ def extract_last_10_digits(num):
     Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
 
-
-    Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
-    Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
-
-    Dialer["cleaned_phone"] = Dialer["customer number"].apply(extract_last_10_digits)
     Dialer = Dialer.rename(columns={'customer number':'cleaned_phone'})
     
-    Dialer["cleaned_phone"] = Dialer["customer number"].apply(extract_last_10_digits)
+    Dialer["cleaned_phone"] = Dialer["cleaned_phone"].apply(smart_parse)
+
     # -------------------
     # Merge
     # -------------------
@@ -1707,11 +1677,6 @@ def extract_last_10_digits(num):
   
     #     st.subheader("Connectivity Chart")
     #     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
-
-
-
-
-
 
 
 
