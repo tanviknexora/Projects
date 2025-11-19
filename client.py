@@ -1,9 +1,1402 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import ast
+import phonenumbers
 import re
+import math
 
-# Parse UTM field from string/dict
+# Auto-generated global mapping of calling codes <-> ISO alpha-2
+CALLING_CODE_TO_ISO = {
+  "1": [
+    "US",
+    "CA",
+    "AG",
+    "AI",
+    "AS",
+    "BB",
+    "BM",
+    "BS",
+    "DM",
+    "DO",
+    "GD",
+    "GU",
+    "JM",
+    "KN",
+    "KY",
+    "LC",
+    "MP",
+    "MS",
+    "PR",
+    "SX",
+    "TC",
+    "TT",
+    "VC",
+    "VG",
+    "VI"
+  ],
+  "20": [
+    "EG"
+  ],
+  "211": [
+    "SS"
+  ],
+  "212": [
+    "MA",
+    "EH"
+  ],
+  "213": [
+    "DZ"
+  ],
+  "216": [
+    "TN"
+  ],
+  "218": [
+    "LY"
+  ],
+  "220": [
+    "GM"
+  ],
+  "221": [
+    "SN"
+  ],
+  "222": [
+    "MR"
+  ],
+  "223": [
+    "ML"
+  ],
+  "224": [
+    "GN"
+  ],
+  "225": [
+    "CI"
+  ],
+  "226": [
+    "BF"
+  ],
+  "227": [
+    "NE"
+  ],
+  "228": [
+    "TG"
+  ],
+  "229": [
+    "BJ"
+  ],
+  "230": [
+    "MU"
+  ],
+  "231": [
+    "LR"
+  ],
+  "232": [
+    "SL"
+  ],
+  "233": [
+    "GH"
+  ],
+  "234": [
+    "NG"
+  ],
+  "235": [
+    "TD"
+  ],
+  "236": [
+    "CF"
+  ],
+  "237": [
+    "CM"
+  ],
+  "238": [
+    "CV"
+  ],
+  "239": [
+    "ST"
+  ],
+  "240": [
+    "GQ"
+  ],
+  "241": [
+    "GA"
+  ],
+  "242": [
+    "CG"
+  ],
+  "243": [
+    "CD"
+  ],
+  "244": [
+    "AO"
+  ],
+  "245": [
+    "GW"
+  ],
+  "246": [
+    "IO"
+  ],
+  "247": [
+    "SH"
+  ],
+  "248": [
+    "SC"
+  ],
+  "249": [
+    "SD"
+  ],
+  "250": [
+    "RW"
+  ],
+  "251": [
+    "ET"
+  ],
+  "252": [
+    "SO"
+  ],
+  "253": [
+    "DJ"
+  ],
+  "254": [
+    "KE"
+  ],
+  "255": [
+    "TZ"
+  ],
+  "256": [
+    "UG"
+  ],
+  "257": [
+    "BI"
+  ],
+  "258": [
+    "MZ"
+  ],
+  "260": [
+    "ZM"
+  ],
+  "261": [
+    "MG"
+  ],
+  "262": [
+    "RE",
+    "YT"
+  ],
+  "263": [
+    "ZW"
+  ],
+  "264": [
+    "NA"
+  ],
+  "265": [
+    "MW"
+  ],
+  "266": [
+    "LS"
+  ],
+  "267": [
+    "BW"
+  ],
+  "268": [
+    "SZ"
+  ],
+  "269": [
+    "KM"
+  ],
+  "27": [
+    "ZA"
+  ],
+  "290": [
+    "SH"
+  ],
+  "291": [
+    "ER"
+  ],
+  "500": [
+    "FK"
+  ],
+  "501": [
+    "BZ"
+  ],
+  "502": [
+    "GT"
+  ],
+  "503": [
+    "SV"
+  ],
+  "504": [
+    "HN"
+  ],
+  "505": [
+    "NI"
+  ],
+  "506": [
+    "CR"
+  ],
+  "507": [
+    "PA"
+  ],
+  "508": [
+    "PM"
+  ],
+  "509": [
+    "HT"
+  ],
+  "51": [
+    "PE"
+  ],
+  "52": [
+    "MX"
+  ],
+  "53": [
+    "CU"
+  ],
+  "54": [
+    "AR"
+  ],
+  "55": [
+    "BR"
+  ],
+  "56": [
+    "CL"
+  ],
+  "57": [
+    "CO"
+  ],
+  "58": [
+    "VE"
+  ],
+  "590": [
+    "GP",
+    "BL",
+    "MF"
+  ],
+  "591": [
+    "BO"
+  ],
+  "592": [
+    "GY"
+  ],
+  "593": [
+    "EC"
+  ],
+  "594": [
+    "GF"
+  ],
+  "595": [
+    "PY"
+  ],
+  "596": [
+    "MQ"
+  ],
+  "597": [
+    "SR"
+  ],
+  "598": [
+    "UY"
+  ],
+  "599": [
+    "CW",
+    "BQ"
+  ],
+  "30": [
+    "GR"
+  ],
+  "31": [
+    "NL"
+  ],
+  "32": [
+    "BE"
+  ],
+  "33": [
+    "FR"
+  ],
+  "34": [
+    "ES"
+  ],
+  "350": [
+    "GI"
+  ],
+  "351": [
+    "PT"
+  ],
+  "352": [
+    "LU"
+  ],
+  "353": [
+    "IE"
+  ],
+  "354": [
+    "IS"
+  ],
+  "355": [
+    "AL"
+  ],
+  "356": [
+    "MT"
+  ],
+  "357": [
+    "CY"
+  ],
+  "358": [
+    "FI",
+    "AX"
+  ],
+  "359": [
+    "BG"
+  ],
+  "36": [
+    "HU"
+  ],
+  "370": [
+    "LT"
+  ],
+  "371": [
+    "LV"
+  ],
+  "372": [
+    "EE"
+  ],
+  "373": [
+    "MD"
+  ],
+  "374": [
+    "AM"
+  ],
+  "375": [
+    "BY"
+  ],
+  "376": [
+    "AD"
+  ],
+  "377": [
+    "MC"
+  ],
+  "378": [
+    "SM"
+  ],
+  "379": [
+    "VA"
+  ],
+  "380": [
+    "UA"
+  ],
+  "381": [
+    "RS"
+  ],
+  "382": [
+    "ME"
+  ],
+  "383": [
+    "XK"
+  ],
+  "385": [
+    "HR"
+  ],
+  "386": [
+    "SI"
+  ],
+  "387": [
+    "BA"
+  ],
+  "389": [
+    "MK"
+  ],
+  "39": [
+    "IT",
+    "VA"
+  ],
+  "40": [
+    "RO"
+  ],
+  "41": [
+    "CH"
+  ],
+  "420": [
+    "CZ"
+  ],
+  "421": [
+    "SK"
+  ],
+  "423": [
+    "LI"
+  ],
+  "43": [
+    "AT"
+  ],
+  "44": [
+    "GB",
+    "GG",
+    "JE",
+    "IM"
+  ],
+  "45": [
+    "DK"
+  ],
+  "46": [
+    "SE"
+  ],
+  "47": [
+    "NO",
+    "SJ"
+  ],
+  "48": [
+    "PL"
+  ],
+  "49": [
+    "DE"
+  ],
+  "90": [
+    "TR"
+  ],
+  "91": [
+    "IN"
+  ],
+  "92": [
+    "PK"
+  ],
+  "93": [
+    "AF"
+  ],
+  "94": [
+    "LK"
+  ],
+  "95": [
+    "MM"
+  ],
+  "960": [
+    "MV"
+  ],
+  "961": [
+    "LB"
+  ],
+  "962": [
+    "JO"
+  ],
+  "963": [
+    "SY"
+  ],
+  "964": [
+    "IQ"
+  ],
+  "965": [
+    "KW"
+  ],
+  "966": [
+    "SA"
+  ],
+  "967": [
+    "YE"
+  ],
+  "968": [
+    "OM"
+  ],
+  "970": [
+    "PS"
+  ],
+  "971": [
+    "AE"
+  ],
+  "972": [
+    "IL"
+  ],
+  "973": [
+    "BH"
+  ],
+  "974": [
+    "QA"
+  ],
+  "975": [
+    "BT"
+  ],
+  "976": [
+    "MN"
+  ],
+  "977": [
+    "NP"
+  ],
+  "98": [
+    "IR"
+  ],
+  "992": [
+    "TJ"
+  ],
+  "993": [
+    "TM"
+  ],
+  "994": [
+    "AZ"
+  ],
+  "995": [
+    "GE"
+  ],
+  "996": [
+    "KG"
+  ],
+  "997": [
+    "KZ"
+  ],
+  "998": [
+    "UZ"
+  ],
+  "60": [
+    "MY"
+  ],
+  "61": [
+    "AU",
+    "CC",
+    "CX"
+  ],
+  "62": [
+    "ID"
+  ],
+  "63": [
+    "PH"
+  ],
+  "64": [
+    "NZ",
+    "PN"
+  ],
+  "65": [
+    "SG"
+  ],
+  "66": [
+    "TH"
+  ],
+  "670": [
+    "TL"
+  ],
+  "672": [
+    "NF"
+  ],
+  "673": [
+    "BN"
+  ],
+  "674": [
+    "NR"
+  ],
+  "675": [
+    "PG"
+  ],
+  "676": [
+    "TO"
+  ],
+  "677": [
+    "SB"
+  ],
+  "678": [
+    "VU"
+  ],
+  "679": [
+    "FJ"
+  ],
+  "680": [
+    "PW"
+  ],
+  "681": [
+    "WF"
+  ],
+  "682": [
+    "CK"
+  ],
+  "683": [
+    "NU"
+  ],
+  "685": [
+    "WS"
+  ],
+  "686": [
+    "KI"
+  ],
+  "687": [
+    "NC"
+  ],
+  "688": [
+    "TV"
+  ],
+  "689": [
+    "PF"
+  ],
+  "690": [
+    "TK"
+  ],
+  "691": [
+    "FM"
+  ],
+  "692": [
+    "MH"
+  ],
+  "81": [
+    "JP"
+  ],
+  "82": [
+    "KR"
+  ],
+  "84": [
+    "VN"
+  ],
+  "850": [
+    "KP"
+  ],
+  "852": [
+    "HK"
+  ],
+  "853": [
+    "MO"
+  ],
+  "855": [
+    "KH"
+  ],
+  "856": [
+    "LA"
+  ],
+  "86": [
+    "CN"
+  ],
+  "880": [
+    "BD"
+  ],
+  "886": [
+    "TW"
+  ],
+  "7": [
+    "RU",
+    "KZ"
+  ]
+}
+
+ISO_TO_CALLING_CODE = {
+  "US": [
+    "1"
+  ],
+  "CA": [
+    "1"
+  ],
+  "AG": [
+    "1"
+  ],
+  "AI": [
+    "1"
+  ],
+  "AS": [
+    "1"
+  ],
+  "BB": [
+    "1"
+  ],
+  "BM": [
+    "1"
+  ],
+  "BS": [
+    "1"
+  ],
+  "DM": [
+    "1"
+  ],
+  "DO": [
+    "1"
+  ],
+  "GD": [
+    "1"
+  ],
+  "GU": [
+    "1"
+  ],
+  "JM": [
+    "1"
+  ],
+  "KN": [
+    "1"
+  ],
+  "KY": [
+    "1"
+  ],
+  "LC": [
+    "1"
+  ],
+  "MP": [
+    "1"
+  ],
+  "MS": [
+    "1"
+  ],
+  "PR": [
+    "1"
+  ],
+  "SX": [
+    "1"
+  ],
+  "TC": [
+    "1"
+  ],
+  "TT": [
+    "1"
+  ],
+  "VC": [
+    "1"
+  ],
+  "VG": [
+    "1"
+  ],
+  "VI": [
+    "1"
+  ],
+  "EG": [
+    "20"
+  ],
+  "SS": [
+    "211"
+  ],
+  "MA": [
+    "212"
+  ],
+  "EH": [
+    "212"
+  ],
+  "DZ": [
+    "213"
+  ],
+  "TN": [
+    "216"
+  ],
+  "LY": [
+    "218"
+  ],
+  "GM": [
+    "220"
+  ],
+  "SN": [
+    "221"
+  ],
+  "MR": [
+    "222"
+  ],
+  "ML": [
+    "223"
+  ],
+  "GN": [
+    "224"
+  ],
+  "CI": [
+    "225"
+  ],
+  "BF": [
+    "226"
+  ],
+  "NE": [
+    "227"
+  ],
+  "TG": [
+    "228"
+  ],
+  "BJ": [
+    "229"
+  ],
+  "MU": [
+    "230"
+  ],
+  "LR": [
+    "231"
+  ],
+  "SL": [
+    "232"
+  ],
+  "GH": [
+    "233"
+  ],
+  "NG": [
+    "234"
+  ],
+  "TD": [
+    "235"
+  ],
+  "CF": [
+    "236"
+  ],
+  "CM": [
+    "237"
+  ],
+  "CV": [
+    "238"
+  ],
+  "ST": [
+    "239"
+  ],
+  "GQ": [
+    "240"
+  ],
+  "GA": [
+    "241"
+  ],
+  "CG": [
+    "242"
+  ],
+  "CD": [
+    "243"
+  ],
+  "AO": [
+    "244"
+  ],
+  "GW": [
+    "245"
+  ],
+  "IO": [
+    "246"
+  ],
+  "SH": [
+    "247",
+    "290"
+  ],
+  "SC": [
+    "248"
+  ],
+  "SD": [
+    "249"
+  ],
+  "RW": [
+    "250"
+  ],
+  "ET": [
+    "251"
+  ],
+  "SO": [
+    "252"
+  ],
+  "DJ": [
+    "253"
+  ],
+  "KE": [
+    "254"
+  ],
+  "TZ": [
+    "255"
+  ],
+  "UG": [
+    "256"
+  ],
+  "BI": [
+    "257"
+  ],
+  "MZ": [
+    "258"
+  ],
+  "ZM": [
+    "260"
+  ],
+  "MG": [
+    "261"
+  ],
+  "RE": [
+    "262"
+  ],
+  "YT": [
+    "262"
+  ],
+  "ZW": [
+    "263"
+  ],
+  "NA": [
+    "264"
+  ],
+  "MW": [
+    "265"
+  ],
+  "LS": [
+    "266"
+  ],
+  "BW": [
+    "267"
+  ],
+  "SZ": [
+    "268"
+  ],
+  "KM": [
+    "269"
+  ],
+  "ZA": [
+    "27"
+  ],
+  "ER": [
+    "291"
+  ],
+  "FK": [
+    "500"
+  ],
+  "BZ": [
+    "501"
+  ],
+  "GT": [
+    "502"
+  ],
+  "SV": [
+    "503"
+  ],
+  "HN": [
+    "504"
+  ],
+  "NI": [
+    "505"
+  ],
+  "CR": [
+    "506"
+  ],
+  "PA": [
+    "507"
+  ],
+  "PM": [
+    "508"
+  ],
+  "HT": [
+    "509"
+  ],
+  "PE": [
+    "51"
+  ],
+  "MX": [
+    "52"
+  ],
+  "CU": [
+    "53"
+  ],
+  "AR": [
+    "54"
+  ],
+  "BR": [
+    "55"
+  ],
+  "CL": [
+    "56"
+  ],
+  "CO": [
+    "57"
+  ],
+  "VE": [
+    "58"
+  ],
+  "GP": [
+    "590"
+  ],
+  "BL": [
+    "590"
+  ],
+  "MF": [
+    "590"
+  ],
+  "BO": [
+    "591"
+  ],
+  "GY": [
+    "592"
+  ],
+  "EC": [
+    "593"
+  ],
+  "GF": [
+    "594"
+  ],
+  "PY": [
+    "595"
+  ],
+  "MQ": [
+    "596"
+  ],
+  "SR": [
+    "597"
+  ],
+  "UY": [
+    "598"
+  ],
+  "CW": [
+    "599"
+  ],
+  "BQ": [
+    "599"
+  ],
+  "GR": [
+    "30"
+  ],
+  "NL": [
+    "31"
+  ],
+  "BE": [
+    "32"
+  ],
+  "FR": [
+    "33"
+  ],
+  "ES": [
+    "34"
+  ],
+  "GI": [
+    "350"
+  ],
+  "PT": [
+    "351"
+  ],
+  "LU": [
+    "352"
+  ],
+  "IE": [
+    "353"
+  ],
+  "IS": [
+    "354"
+  ],
+  "AL": [
+    "355"
+  ],
+  "MT": [
+    "356"
+  ],
+  "CY": [
+    "357"
+  ],
+  "FI": [
+    "358"
+  ],
+  "AX": [
+    "358"
+  ],
+  "BG": [
+    "359"
+  ],
+  "HU": [
+    "36"
+  ],
+  "LT": [
+    "370"
+  ],
+  "LV": [
+    "371"
+  ],
+  "EE": [
+    "372"
+  ],
+  "MD": [
+    "373"
+  ],
+  "AM": [
+    "374"
+  ],
+  "BY": [
+    "375"
+  ],
+  "AD": [
+    "376"
+  ],
+  "MC": [
+    "377"
+  ],
+  "SM": [
+    "378"
+  ],
+  "VA": [
+    "39",
+    "379"
+  ],
+  "UA": [
+    "380"
+  ],
+  "RS": [
+    "381"
+  ],
+  "ME": [
+    "382"
+  ],
+  "XK": [
+    "383"
+  ],
+  "HR": [
+    "385"
+  ],
+  "SI": [
+    "386"
+  ],
+  "BA": [
+    "387"
+  ],
+  "MK": [
+    "389"
+  ],
+  "IT": [
+    "39"
+  ],
+  "RO": [
+    "40"
+  ],
+  "CH": [
+    "41"
+  ],
+  "CZ": [
+    "420"
+  ],
+  "SK": [
+    "421"
+  ],
+  "LI": [
+    "423"
+  ],
+  "AT": [
+    "43"
+  ],
+  "GB": [
+    "44"
+  ],
+  "GG": [
+    "44"
+  ],
+  "JE": [
+    "44"
+  ],
+  "IM": [
+    "44"
+  ],
+  "DK": [
+    "45"
+  ],
+  "SE": [
+    "46"
+  ],
+  "NO": [
+    "47"
+  ],
+  "SJ": [
+    "47"
+  ],
+  "PL": [
+    "48"
+  ],
+  "DE": [
+    "49"
+  ],
+  "TR": [
+    "90"
+  ],
+  "IN": [
+    "91"
+  ],
+  "PK": [
+    "92"
+  ],
+  "AF": [
+    "93"
+  ],
+  "LK": [
+    "94"
+  ],
+  "MM": [
+    "95"
+  ],
+  "MV": [
+    "960"
+  ],
+  "LB": [
+    "961"
+  ],
+  "JO": [
+    "962"
+  ],
+  "SY": [
+    "963"
+  ],
+  "IQ": [
+    "964"
+  ],
+  "KW": [
+    "965"
+  ],
+  "SA": [
+    "966"
+  ],
+  "YE": [
+    "967"
+  ],
+  "OM": [
+    "968"
+  ],
+  "PS": [
+    "970"
+  ],
+  "AE": [
+    "971"
+  ],
+  "IL": [
+    "972"
+  ],
+  "BH": [
+    "973"
+  ],
+  "QA": [
+    "974"
+  ],
+  "BT": [
+    "975"
+  ],
+  "MN": [
+    "976"
+  ],
+  "NP": [
+    "977"
+  ],
+  "IR": [
+    "98"
+  ],
+  "TJ": [
+    "992"
+  ],
+  "TM": [
+    "993"
+  ],
+  "AZ": [
+    "994"
+  ],
+  "GE": [
+    "995"
+  ],
+  "KG": [
+    "996"
+  ],
+  "KZ": [
+    "7",
+    "997"
+  ],
+  "UZ": [
+    "998"
+  ],
+  "MY": [
+    "60"
+  ],
+  "AU": [
+    "61"
+  ],
+  "CC": [
+    "61"
+  ],
+  "CX": [
+    "61"
+  ],
+  "ID": [
+    "62"
+  ],
+  "PH": [
+    "63"
+  ],
+  "NZ": [
+    "64"
+  ],
+  "PN": [
+    "64"
+  ],
+  "SG": [
+    "65"
+  ],
+  "TH": [
+    "66"
+  ],
+  "TL": [
+    "670"
+  ],
+  "NF": [
+    "672"
+  ],
+  "BN": [
+    "673"
+  ],
+  "NR": [
+    "674"
+  ],
+  "PG": [
+    "675"
+  ],
+  "TO": [
+    "676"
+  ],
+  "SB": [
+    "677"
+  ],
+  "VU": [
+    "678"
+  ],
+  "FJ": [
+    "679"
+  ],
+  "PW": [
+    "680"
+  ],
+  "WF": [
+    "681"
+  ],
+  "CK": [
+    "682"
+  ],
+  "NU": [
+    "683"
+  ],
+  "WS": [
+    "685"
+  ],
+  "KI": [
+    "686"
+  ],
+  "NC": [
+    "687"
+  ],
+  "TV": [
+    "688"
+  ],
+  "PF": [
+    "689"
+  ],
+  "TK": [
+    "690"
+  ],
+  "FM": [
+    "691"
+  ],
+  "MH": [
+    "692"
+  ],
+  "JP": [
+    "81"
+  ],
+  "KR": [
+    "82"
+  ],
+  "VN": [
+    "84"
+  ],
+  "KP": [
+    "850"
+  ],
+  "HK": [
+    "852"
+  ],
+  "MO": [
+    "853"
+  ],
+  "KH": [
+    "855"
+  ],
+  "LA": [
+    "856"
+  ],
+  "CN": [
+    "86"
+  ],
+  "BD": [
+    "880"
+  ],
+  "TW": [
+    "886"
+  ],
+  "RU": [
+    "7"
+  ]
+}
+
+
+# ======================================
+# ⚙️ Helper functions (from your code)
+# ======================================
 def parse_utm(x):
     if pd.isna(x):
         return None
@@ -16,82 +1409,141 @@ def parse_utm(x):
             return None
     return None
 
-# Extract last 10 digits from a string, return None if less than 10 digits
-def extract_last_10_digits(num):
-    if pd.isna(num):
+def smart_parse(num):
+    if num is None:
         return None
-    s = str(num)
-    digits_only = re.sub(r'\D', '', s)  # Remove non-digit chars
-    if len(digits_only) < 10:
+    if isinstance(num, float) and math.isnan(num):
         return None
-    return digits_only[-10:]  # Last 10 digits
 
+    # Handle floats (including scientific notation) by converting to int string
+    if isinstance(num, float):
+        try:
+            s = str(int(num))
+        except:
+            return None
+    else:
+        s = str(num).strip()
+
+    # Remove non-digits for digit count
+    digits_only = re.sub(r'\D', '', s)
+
+    # If exactly 10 digits and no '+' prefix, assume Indian local number and prepend +91
+    if len(digits_only) == 10 and not s.startswith("+"):
+        s = "+91" + digits_only
+    elif not s.startswith("+"):
+        s = "+" + s
+
+    try:
+        parsed = phonenumbers.parse(s, None)
+        if phonenumbers.is_valid_number(parsed):
+            # Format as E164 and remove '+'
+            return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164).replace("+", "")
+    except:
+        return None
+
+    return None
+
+# ======================================
+# Streamlit UI
+# ======================================
 st.set_page_config(page_title="Call & CRM Dashboard", layout="wide")
 st.title("📞 Call & CRM Analysis")
 
+# Upload files
 crm_file = st.file_uploader("Upload CRM file", type=["xlsx"])
 dialer_file = st.file_uploader("Upload Dialer file", type=["xlsx"])
 
 if crm_file and dialer_file:
-    # Load CRM and parse UTM hit if present
-    df_crm = pd.read_excel(crm_file)
-    df_crm.columns = df_crm.columns.str.lower()
-    if "utm_hit" in df_crm.columns:
-        df_crm["utm_hit"] = df_crm["utm_hit"].apply(parse_utm)
-        utm_df = pd.json_normalize(df_crm["utm_hit"]).add_prefix("utm_hit_")
-        df_crm = pd.concat([df_crm.drop(columns=["utm_hit"]), utm_df], axis=1)
+    # -------------------
+    # Load CRM
+    # -------------------
+    df = pd.read_excel(crm_file)
+    df.columns = df.columns.str.lower()
+    if "utm_hit" in df.columns:
+        df["utm_hit"] = df["utm_hit"].apply(parse_utm)
+        utm_df = pd.json_normalize(df["utm_hit"]).add_prefix("utm_hit_")
+        df_con = pd.concat([df.drop(columns=["utm_hit"]), utm_df], axis=1)
+    else:
+        df_con = df.copy()
+    
+    df_con["cleaned_phone"] = df_con["phone"].apply(smart_parse)
 
-    # Phone cleaning by extracting last 10 digits consistently
-    df_crm["cleaned_phone"] = df_crm["phone"].apply(extract_last_10_digits)
+    # -------------------
+    # Load Dialer
+    # -------------------
+    Dialer = pd.read_excel(dialer_file)
+    Dialer.columns = Dialer.columns.str.lower()
+    Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
+    
+    Dialer["start time"] = pd.to_datetime(Dialer["start time"])
+    Dialer["end time"] = pd.to_datetime(Dialer["end time"])
+    Dialer["queue duration"] = pd.to_datetime(Dialer["queue duration"])
 
-    st.write("CRM cleaned phones sample:", df_crm["cleaned_phone"].dropna().sample(min(10, len(df_crm))))
-
-    # Load Dialer and extract last 10 digits similarly
-    df_dialer = pd.read_excel(dialer_file)
-    df_dialer.columns = df_dialer.columns.str.lower()
-    df_dialer = df_dialer[['customer number', 'account', 'start time', 'queue duration', 'end time', 'call status']]
-
-    df_dialer["cleaned_phone"] = df_dialer["customer number"].apply(extract_last_10_digits)
-
-    st.write("Dialer cleaned phones sample:", df_dialer["cleaned_phone"].dropna().sample(min(10, len(df_dialer))))
-
-    df_dialer["start time"] = pd.to_datetime(df_dialer["start time"])
-    df_dialer["end time"] = pd.to_datetime(df_dialer["end time"])
-    df_dialer["queue duration"] = pd.to_datetime(df_dialer["queue duration"])
-
-    df_dialer["answer_duration_sec"] = (df_dialer["end time"] - df_dialer["start time"]).dt.total_seconds()
-    df_dialer["queue_sec"] = (
-        df_dialer["queue duration"].dt.hour * 3600 +
-        df_dialer["queue duration"].dt.minute * 60 +
-        df_dialer["queue duration"].dt.second
+    Dialer["answer_duration_sec"] = (Dialer["end time"] - Dialer["start time"]).dt.total_seconds()
+    Dialer["queue_sec"] = (
+        Dialer["queue duration"].dt.hour * 3600 +
+        Dialer["queue duration"].dt.minute * 60 +
+        Dialer["queue duration"].dt.second
     )
-    df_dialer["total_duration_sec"] = df_dialer["answer_duration_sec"] + df_dialer["queue_sec"]
-    df_dialer["answer_duration_hms"] = pd.to_timedelta(df_dialer["answer_duration_sec"], unit="s").astype(str).str.split().str[0]
-    df_dialer["total_duration_hms"] = pd.to_timedelta(df_dialer["total_duration_sec"], unit="s").astype(str).str.split().str[0]
+    Dialer["total_duration_sec"] = Dialer["answer_duration_sec"] + Dialer["queue_sec"]
 
-    # Merge CRM and Dialer on cleaned_phone (last 10 digits)
-    df_calls = df_crm.merge(df_dialer, on="cleaned_phone", how="left")
+    Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
+    Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
+
+    Dialer = Dialer.rename(columns={'customer number':'cleaned_phone'})
+    
+    Dialer["cleaned_phone"] = Dialer["cleaned_phone"].apply(smart_parse)
+
+    # -------------------
+    # Merge
+    # -------------------
+    df_calls = df_con.merge(Dialer, on="cleaned_phone", how="left")
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
 
+    # Duration
     df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
     df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
+    
+    # These are the unique numbers loaded in CRM
+    crm_unique_phones = set(df_con["cleaned_phone"].dropna().unique())
 
-    crm_unique_phones = set(df_crm["cleaned_phone"].dropna().unique())
-    dialed_unique_phones = set(df_dialer["cleaned_phone"].dropna().unique())
+    # These are the unique numbers dialled at least once (including missed or answered)
+    dialled_unique_phones = set(Dialer["cleaned_phone"].dropna().unique())
 
-    untouched_phones = crm_unique_phones - dialed_unique_phones
-    contacted_phones = dialed_unique_phones
+    # Untouched = in CRM but never dialled
+    untouched_phones = crm_unique_phones - dialled_unique_phones
 
-    df_crm["contacted"] = df_crm["cleaned_phone"].isin(contacted_phones)
-    df_crm["untouched"] = df_crm["cleaned_phone"].isin(untouched_phones)
+    # Contacted = dialled at least once
+    contacted_phones = dialled_unique_phones
 
-    if "utm_hit_utmSource" in df_crm.columns and "utm_hit_utmCampaign" in df_crm.columns:
+    # For campaign summary, show actual unique phone numbers for contacted/untouched leads
+    df_con["contacted"] = df_con["cleaned_phone"].isin(contacted_phones)
+    df_con["untouched"] = df_con["cleaned_phone"].isin(untouched_phones)
+
+    # Then for each campaign
+    campaign_contacted = df_con[df_con["contacted"]].groupby(
+        ["utm_hit_utmSource", "utm_hit_utmCampaign"]
+    )["cleaned_phone"].unique().reset_index(name="contacted_leads")
+    campaign_untouched = df_con[df_con["untouched"]].groupby(
+        ["utm_hit_utmSource", "utm_hit_utmCampaign"]
+    )["cleaned_phone"].unique().reset_index(name="untouched_leads")
+    # -------------------
+    # Campaign Engagement Summary (paste here)
+    # -------------------
+    if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
         total_leads = (
-            df_crm.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"]
+            df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
             .nunique()
             .reset_index(name="total_leads")
         )
 
+        dialled_leads = (
+            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"],dropna='False')["cleaned_phone"]
+            .nunique()
+            .reset_index(name="dialled_leads")
+        )
+
+        # For each source/campaign & phone, determine the HIGHEST call status
         def classify_status(gr):
             if 'Answered' in gr.values:
                 return 'Answered'
@@ -101,94 +1553,151 @@ if crm_file and dialer_file:
                 return 'None'
 
         lead_status = (
-            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone"], dropna=False)["call status"]
+            df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "cleaned_phone"],dropna='False')["call status"]
             .agg(classify_status)
             .reset_index()
         )
 
         summary = (
-            lead_status.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"], dropna=False)["cleaned_phone"]
+            lead_status
+            .groupby(["utm_hit_utmSource", "utm_hit_utmCampaign", "call status"],dropna='False')["cleaned_phone"]
             .nunique()
             .unstack(fill_value=0)
             .reset_index()
         )
         summary = summary.rename(columns={'Answered': 'answered_leads', 'Missed': 'missed_leads', 'None': 'other_leads'})
+        summary["dialled_leads"] = summary.get('answered_leads', 0) + summary.get('missed_leads', 0)
 
-        for col in ['answered_leads', 'missed_leads']:
-            if col not in summary.columns:
-                summary[col] = 0
-
-        summary["dialled_leads"] = summary['answered_leads'] + summary['missed_leads']
-
+        # Get total and untouched leads
+        total_leads = df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="total_leads")
         campaign_engagement = total_leads.merge(summary, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
         campaign_engagement["untouched_leads"] = campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
-        campaign_engagement["contact_rate_%"] = ((campaign_engagement["dialled_leads"] / campaign_engagement["total_leads"]) * 100).round(1)
+
+        campaign_engagement["contact_rate_%"] = (
+            (campaign_engagement["dialled_leads"] / campaign_engagement["total_leads"]) * 100
+        ).round(1)
+
         campaign_engagement["answer_rate_%"] = campaign_engagement.apply(
             lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
-            axis=1,
+            axis=1
         ).round(1)
 
         st.subheader("📊 Campaign Engagement Summary")
         st.dataframe(campaign_engagement, use_container_width=True)
-
+        # -------------------
+        # Dialer Summary
+        # -------------------
         dialer_summary = (
-            df_calls.groupby(["cleaned_phone", "first_name", "account"])
+            df_calls.groupby(["cleaned_phone","first_name","account"])
             .agg(
-                answered_calls=("call status", lambda x: (x == "Answered").sum()),
-                missed_calls=("call status", lambda x: (x == "Missed").sum()),
-                total_duration_sec=("duration_sec", "sum"),
-                answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index, "call status"] == "Answered"].sum()),
-            )
-            .reset_index()
+                 answered_calls=("call status", lambda x: (x=="Answered").sum()),
+                 missed_calls=("call status", lambda x: (x=="Missed").sum()),
+                 total_duration_sec=("duration_sec","sum"),
+                 answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index,"call status"]=="Answered"].sum())
+             ).reset_index()
         )
 
         dialer_summary["answered_duration_hms"] = pd.to_timedelta(dialer_summary["answered_duration_sec"], unit="s").astype(str).str.split().str[-1]
         dialer_summary["total_duration_hms"] = pd.to_timedelta(dialer_summary["total_duration_sec"], unit="s").astype(str).str.split().str[-1]
+        dialer_summary = dialer_summary[["cleaned_phone","first_name","account","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]]
 
-        dialer_summary = dialer_summary[
-            [
-                "cleaned_phone",
-                "first_name",
-                "account",
-                "answered_calls",
-                "missed_calls",
-                "answered_duration_hms",
-                "total_duration_hms",
-            ]
-        ]
+    # -------------------
+    # Filters
+    # -------------------
+    st.sidebar.header("Filters")
+    selected_names = st.sidebar.multiselect("Filter by First Name", options=dialer_summary["first_name"].unique())
+    selected_accounts = st.sidebar.multiselect("Filter by Account", options=dialer_summary["account"].unique())
+    selected_phones = st.sidebar.multiselect("Filter by Phone", options=dialer_summary["cleaned_phone"].unique())
 
-        st.sidebar.header("Filters")
-        selected_names = st.sidebar.multiselect("Filter by First Name", options=dialer_summary["first_name"].unique())
-        selected_accounts = st.sidebar.multiselect("Filter by Account", options=dialer_summary["account"].unique())
-        selected_phones = st.sidebar.multiselect("Filter by Phone", options=dialer_summary["cleaned_phone"].unique())
+    filtered_summary = dialer_summary.copy()
+    if selected_names:
+        filtered_summary = filtered_summary[filtered_summary["first_name"].isin(selected_names)]
+    if selected_accounts:
+        filtered_summary = filtered_summary[filtered_summary["account"].isin(selected_accounts)]
+    if selected_phones:
+        filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(selected_phones)]
 
-        filtered_summary = dialer_summary.copy()
-        if selected_names:
-            filtered_summary = filtered_summary[filtered_summary["first_name"].isin(selected_names)]
-        if selected_accounts:
-            filtered_summary = filtered_summary[filtered_summary["account"].isin(selected_accounts)]
-        if selected_phones:
-            filtered_summary = filtered_summary[filtered_summary["cleaned_phone"].isin(selected_phones)]
+    st.subheader("Dialer Summary")
+    st.dataframe(filtered_summary, use_container_width=True)
 
-        st.subheader("Dialer Summary")
-        st.dataframe(filtered_summary, use_container_width=True)
+    # -------------------
+    # Detailed Call Logs
+    # -------------------
+    selected_phone = st.selectbox("Select phone to view detailed calls", options=filtered_summary["cleaned_phone"].unique())
+    if selected_phone:
+        st.subheader(f"Detailed Calls for {selected_phone}")
+        call_details = df_calls[df_calls["cleaned_phone"]==selected_phone][["start time","end time","call status","answer_duration_hms","total_duration_hms"]]
+        st.dataframe(call_details, use_container_width=True)
 
-        selected_phone = st.selectbox("Select phone to view detailed calls", options=filtered_summary["cleaned_phone"].unique())
-        if selected_phone:
-            st.subheader(f"Detailed Calls for {selected_phone}")
-            call_details = df_calls[df_calls["cleaned_phone"] == selected_phone][
-                ["start time", "end time", "call status", "answer_duration_hms", "total_duration_hms"]
-            ]
-            st.dataframe(call_details, use_container_width=True)
 
-        source_connectivity = df_calls.groupby(["utm_hit_utmSource", "call status"]).size().unstack(fill_value=0).reset_index()
-        if "Answered" not in source_connectivity.columns:
-            source_connectivity["Answered"] = 0
-        if "Missed" not in source_connectivity.columns:
-            source_connectivity["Missed"] = 0
-        source_connectivity = source_connectivity.rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
-        source_connectivity["total_calls"] = source_connectivity["answered_calls"] + source_connectivity["missed_calls"]
-        source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"] / source_connectivity["total_calls"]).round(2)
+    # -------------------
+    # Connectivity Rate
+    # -------------------
+    source_connectivity = (
+        df_calls.groupby(["utm_hit_utmSource","call status"])
+        .size().unstack(fill_value=0).reset_index()
+        .rename(columns={"Answered":"answered_calls","Missed":"missed_calls"})
+    )
+    source_connectivity["total_calls"] = source_connectivity["answered_calls"] + source_connectivity["missed_calls"]
+    source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"]/source_connectivity["total_calls"]).round(2)
+    st.subheader("Connectivity Rate by Source")
+    st.dataframe(source_connectivity)
+        
+        # -------------------
+        # Campaign Lead Engagement Summary
+        # -------------------
+    # if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
+    #     # Total leads per campaign
+    #     campaign_leads = (
+    #         df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)
+    #         .agg(total_leads=("cleaned_phone", "nunique"))
+    #         .reset_index()
+    #     )
 
-        st.subheader("Connectivity Rate by Source")
-        st.dataframe(source_connectivity, use_container_width=True)
+    #     # Dialled leads per campaign
+    #     dialled = df_calls.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="dialled_leads")
+    #     answered = df_calls[df_calls["call status"]=="Answered"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="answered_leads")
+    #     missed = df_calls[df_calls["call status"]=="Missed"].groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"].nunique().reset_index(name="missed_leads")
+
+    #     # Merge all together
+    #     campaign_summary_table = (
+    #         campaign_leads
+    #         .merge(dialled, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+    #         .merge(answered, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+    #         .merge(missed, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left")
+    #         .fillna(0)
+    #     )
+
+    #     # Calculate untouched leads
+    #     campaign_summary_table["untouched_leads"] = campaign_summary_table["total_leads"] - campaign_summary_table["dialled_leads"]
+
+    #     # Display in Streamlit
+    #     st.subheader("Campaign Lead Engagement Summary")
+    #     st.dataframe(campaign_summary_table, use_container_width=True)
+  
+    #     st.subheader("Connectivity Chart")
+    #     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
