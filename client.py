@@ -5,7 +5,6 @@ import phonenumbers
 import re
 import math
 
-# Helper to parse UTM data
 def parse_utm(x):
     if pd.isna(x):
         return None
@@ -18,7 +17,6 @@ def parse_utm(x):
             return None
     return None
 
-# Phone cleaning to E.164 without '+'
 def smart_parse(num):
     if num is None:
         return None
@@ -55,14 +53,25 @@ if crm_file and dialer_file:
         df_crm = pd.concat([df_crm.drop(columns=["utm_hit"]), utm_df], axis=1)
 
     df_crm["cleaned_phone"] = df_crm["phone"].apply(smart_parse)
-    st.write("CRM cleaned phones sample:", df_crm["cleaned_phone"].dropna().sample(min(10,len(df_crm))))
+
+    # Defensive sampling for non-empty Series
+    crm_sample = df_crm["cleaned_phone"].dropna()
+    if not crm_sample.empty:
+        st.write("CRM cleaned phones sample:", crm_sample.sample(min(10, len(crm_sample))))
+    else:
+        st.write("CRM cleaned phones sample: No valid cleaned phones found.")
 
     df_dialer = pd.read_excel(dialer_file)
     df_dialer.columns = df_dialer.columns.str.lower()
     df_dialer = df_dialer[['customer number', 'account', 'start time', 'queue duration', 'end time', 'call status']]
 
     df_dialer["cleaned_phone"] = df_dialer["customer number"].astype(str).apply(smart_parse)
-    st.write("Dialer cleaned phones sample:", df_dialer["cleaned_phone"].dropna().sample(min(10,len(df_dialer))))
+
+    dialer_sample = df_dialer["cleaned_phone"].dropna()
+    if not dialer_sample.empty:
+        st.write("Dialer cleaned phones sample:", dialer_sample.sample(min(10, len(dialer_sample))))
+    else:
+        st.write("Dialer cleaned phones sample: No valid cleaned phones found.")
 
     df_dialer["start time"] = pd.to_datetime(df_dialer["start time"])
     df_dialer["end time"] = pd.to_datetime(df_dialer["end time"])
@@ -78,10 +87,14 @@ if crm_file and dialer_file:
     df_dialer["answer_duration_hms"] = pd.to_timedelta(df_dialer["answer_duration_sec"], unit="s").astype(str).str.split().str[0]
     df_dialer["total_duration_hms"] = pd.to_timedelta(df_dialer["total_duration_sec"], unit="s").astype(str).str.split().str[0]
 
-    # Use inner join temporarily for debugging merged keys
+    # Perform an inner merge for valid joined records
     df_calls = df_crm.merge(df_dialer, on="cleaned_phone", how="inner", suffixes=('', '_dialer'))
+
     st.write(f"Merged calls count: {len(df_calls)}")
-    st.write(df_calls[["cleaned_phone", "call status"]].head(10))
+    if not df_calls.empty:
+        st.write(df_calls[["cleaned_phone", "call status"]].head(10))
+    else:
+        st.write("No merged calls found after join.")
 
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
     df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
@@ -125,17 +138,17 @@ if crm_file and dialer_file:
         st.subheader("📊 Campaign Engagement Summary")
         st.dataframe(campaign_engagement, use_container_width=True)
 
-        dialer_summary = df_calls.groupby(["cleaned_phone","first_name","account"]).agg(
-            answered_calls=("call status", lambda x: (x=="Answered").sum()),
-            missed_calls=("call status", lambda x: (x=="Missed").sum()),
-            total_duration_sec=("duration_sec","sum"),
-            answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index,"call status"]=="Answered"].sum())
+        dialer_summary = df_calls.groupby(["cleaned_phone", "first_name", "account"]).agg(
+            answered_calls=("call status", lambda x: (x == "Answered").sum()),
+            missed_calls=("call status", lambda x: (x == "Missed").sum()),
+            total_duration_sec=("duration_sec", "sum"),
+            answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index, "call status"] == "Answered"].sum())
         ).reset_index()
 
         dialer_summary["answered_duration_hms"] = pd.to_timedelta(dialer_summary["answered_duration_sec"], unit="s").astype(str).str.split().str[-1]
         dialer_summary["total_duration_hms"] = pd.to_timedelta(dialer_summary["total_duration_sec"], unit="s").astype(str).str.split().str[-1]
 
-        dialer_summary = dialer_summary[["cleaned_phone","first_name","account","answered_calls","missed_calls","answered_duration_hms","total_duration_hms"]]
+        dialer_summary = dialer_summary[["cleaned_phone", "first_name", "account", "answered_calls", "missed_calls", "answered_duration_hms", "total_duration_hms"]]
 
         st.sidebar.header("Filters")
         selected_names = st.sidebar.multiselect("Filter by First Name", options=dialer_summary["first_name"].unique())
@@ -156,17 +169,19 @@ if crm_file and dialer_file:
         selected_phone = st.selectbox("Select phone to view detailed calls", options=filtered_summary["cleaned_phone"].unique())
         if selected_phone:
             st.subheader(f"Detailed Calls for {selected_phone}")
-            call_details = df_calls[df_calls["cleaned_phone"]==selected_phone][["start time","end time","call status","answer_duration_hms","total_duration_hms"]]
+            call_details = df_calls[df_calls["cleaned_phone"] == selected_phone][["start time", "end time", "call status", "answer_duration_hms", "total_duration_hms"]]
             st.dataframe(call_details, use_container_width=True)
 
-        source_connectivity = df_calls.groupby(["utm_hit_utmSource","call status"]).size().unstack(fill_value=0).reset_index()
+        source_connectivity = (
+            df_calls.groupby(["utm_hit_utmSource", "call status"]).size().unstack(fill_value=0).reset_index()
+        )
         if 'Answered' not in source_connectivity.columns:
             source_connectivity['Answered'] = 0
         if 'Missed' not in source_connectivity.columns:
             source_connectivity['Missed'] = 0
-        source_connectivity = source_connectivity.rename(columns={"Answered":"answered_calls","Missed":"missed_calls"})
+        source_connectivity = source_connectivity.rename(columns={"Answered": "answered_calls", "Missed": "missed_calls"})
         source_connectivity["total_calls"] = source_connectivity["answered_calls"] + source_connectivity["missed_calls"]
-        source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"]/source_connectivity["total_calls"]).round(2)
+        source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"] / source_connectivity["total_calls"]).round(2)
 
         st.subheader("Connectivity Rate by Source")
         st.dataframe(source_connectivity, use_container_width=True)
