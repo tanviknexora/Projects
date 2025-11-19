@@ -1467,13 +1467,13 @@ if crm_file and dialer_file:
         df_con = df.copy()
       
     def extract_last_10_digits(num):
-    if pd.isna(num):
+      if pd.isna(num):
         return None
-    s = str(num)
-    digits_only = re.sub(r'\D', '', s)  # Remove non-digits
-    if len(digits_only) < 10:
+      s = str(num)
+      digits_only = re.sub(r'\D', '', s)  # Remove non-digits
+      if len(digits_only) < 10:
         return None
-    return digits_only[-10:]  # Last 10 digits
+      return digits_only[-10:]  # Last 10 digits
   
     df_con["cleaned_phone"] = df_con["phone"].apply(extract_last_10_digits)
 
@@ -1685,6 +1685,7 @@ if crm_file and dialer_file:
   
     #     st.subheader("Connectivity Chart")
     #     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
