@@ -1480,20 +1480,31 @@ if crm_file and dialer_file:
     # -------------------
     # Load Dialer
     # -------------------
-    Dialer = pd.read_excel(dialer_file)
-    Dialer.columns = Dialer.columns.str.lower()
-    Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
+Dialer = pd.read_excel(dialer_file)
+Dialer.columns = Dialer.columns.str.lower()
+Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
 
-    # Apply cleaning BEFORE renaming
-    Dialer['cleaned_phone'] = Dialer['customer number'].apply(extract_last_10_digits)
+# Extract last 10 digits from "customer number" BEFORE renaming or dropping columns
+def extract_last_10_digits(num):
+    if pd.isna(num):
+        return None
+    s = str(num)
+    digits_only = re.sub(r'\D', '', s)  # Remove all non-digit characters
+    if len(digits_only) < 10:
+        return None
+    return digits_only[-10:]  # last 10 digits
 
-    # Optionally remove the old column now you have cleaned_phone
-    Dialer = Dialer.drop(columns=['customer number'])
-    
+    Dialer["cleaned_phone"] = Dialer["customer number"].apply(extract_last_10_digits)
+
+    # Optionally drop original column if no longer needed
+    Dialer = Dialer.drop(columns=["customer number"])
+
+    # Convert datetime columns
     Dialer["start time"] = pd.to_datetime(Dialer["start time"])
     Dialer["end time"] = pd.to_datetime(Dialer["end time"])
     Dialer["queue duration"] = pd.to_datetime(Dialer["queue duration"])
 
+    # Calculate durations
     Dialer["answer_duration_sec"] = (Dialer["end time"] - Dialer["start time"]).dt.total_seconds()
     Dialer["queue_sec"] = (
         Dialer["queue duration"].dt.hour * 3600 +
@@ -1501,6 +1512,10 @@ if crm_file and dialer_file:
         Dialer["queue duration"].dt.second
     )
     Dialer["total_duration_sec"] = Dialer["answer_duration_sec"] + Dialer["queue_sec"]
+
+    Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
+    Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
+
 
     Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
@@ -1691,6 +1706,7 @@ if crm_file and dialer_file:
   
     #     st.subheader("Connectivity Chart")
     #     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
