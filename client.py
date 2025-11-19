@@ -1483,6 +1483,12 @@ if crm_file and dialer_file:
     Dialer = pd.read_excel(dialer_file)
     Dialer.columns = Dialer.columns.str.lower()
     Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
+
+    # Apply cleaning BEFORE renaming
+    Dialer['cleaned_phone'] = Dialer['customer number'].apply(extract_last_10_digits)
+
+    # Optionally remove the old column now you have cleaned_phone
+    Dialer = Dialer.drop(columns=['customer number'])
     
     Dialer["start time"] = pd.to_datetime(Dialer["start time"])
     Dialer["end time"] = pd.to_datetime(Dialer["end time"])
@@ -1685,6 +1691,7 @@ if crm_file and dialer_file:
   
     #     st.subheader("Connectivity Chart")
     #     st.bar_chart(source_connectivity.set_index("utm_hit_utmSource")["connectivity_rate"])
+
 
 
 
