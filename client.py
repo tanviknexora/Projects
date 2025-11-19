@@ -1,14 +1,10 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import ast
 import phonenumbers
 import re
 import math
 
-###########################
-# Helper Functions
-###########################
 def parse_utm(x):
     if pd.isna(x):
         return None
@@ -26,32 +22,22 @@ def smart_parse(num):
         return None
     if isinstance(num, float) and math.isnan(num):
         return None
-    
     s = str(num).strip()
     digits_only = re.sub(r'\D', '', s)
-
-    # Attempt Indian local number (10 digits) if no '+' or country code
     if len(digits_only) == 10 and not s.startswith('+'):
         s = '+91' + digits_only
     elif not s.startswith('+'):
         s = '+' + digits_only
     else:
-        # sanitized to +<digits>
         s = '+' + digits_only
-
     try:
         parsed = phonenumbers.parse(s, None)
         if phonenumbers.is_valid_number(parsed):
-            # Return E.164 format without '+'
             return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164).replace('+', '')
     except:
         return None
-    
     return None
 
-###########################
-# Streamlit UI
-###########################
 st.set_page_config(page_title="Call & CRM Dashboard", layout="wide")
 st.title("📞 Call & CRM Analysis")
 
@@ -59,7 +45,6 @@ crm_file = st.file_uploader("Upload CRM file", type=["xlsx"])
 dialer_file = st.file_uploader("Upload Dialer file", type=["xlsx"])
 
 if crm_file and dialer_file:
-    # CRM Load and Phone Cleaning
     df = pd.read_excel(crm_file)
     df.columns = df.columns.str.lower()
     if "utm_hit" in df.columns:
@@ -68,14 +53,11 @@ if crm_file and dialer_file:
         df_con = pd.concat([df.drop(columns=["utm_hit"]), utm_df], axis=1)
     else:
         df_con = df.copy()
-    
     df_con["cleaned_phone"] = df_con["phone"].apply(smart_parse)
 
-    # DIALER: Clean and Normalize Phones
     Dialer = pd.read_excel(dialer_file)
     Dialer.columns = Dialer.columns.str.lower()
-    Dialer = Dialer[['customer number','account','start time','queue duration','end time','call status']]
-
+    Dialer = Dialer[['customer number', 'account', 'start time', 'queue duration', 'end time', 'call status']]
     Dialer["customer number"] = Dialer["customer number"].astype(str)
     Dialer["cleaned_phone"] = Dialer["customer number"].apply(smart_parse)
     Dialer["start time"] = pd.to_datetime(Dialer["start time"])
@@ -92,15 +74,11 @@ if crm_file and dialer_file:
     Dialer["answer_duration_hms"] = pd.to_timedelta(Dialer["answer_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
     Dialer["total_duration_hms"] = pd.to_timedelta(Dialer["total_duration_sec"], unit="s").apply(lambda x: str(x).split(".")[0])
 
-    # Merge on CLEANED/VALIDATED phones
-    df_calls = df_con.merge(Dialer, on="cleaned_phone", how="left", suffixes=('', '_dialer'))
+    df_calls = df_con.merge(Dialer, on="cleaned_phone", how="left")
     df_calls["first_name"] = df_calls["full_name"].str.split().str[0]
-
-    # Duration Clean-up
     df_calls["duration_sec"] = (df_calls["end time"] - df_calls["start time"]).dt.total_seconds()
     df_calls.loc[df_calls["call status"] == "Missed", "duration_sec"] = 0
 
-    ### Unique CRM and Dialer Numbers After Cleaning
     crm_unique_phones = set(df_con["cleaned_phone"].dropna().unique())
     dialled_unique_phones = set(Dialer["cleaned_phone"].dropna().unique())
     untouched_phones = crm_unique_phones - dialled_unique_phones
@@ -109,15 +87,6 @@ if crm_file and dialer_file:
     df_con["contacted"] = df_con["cleaned_phone"].isin(contacted_phones)
     df_con["untouched"] = df_con["cleaned_phone"].isin(untouched_phones)
 
-    # Contacted and Untouched Lists Per Campaign
-    campaign_contacted = df_con[df_con["contacted"]].groupby(
-        ["utm_hit_utmSource", "utm_hit_utmCampaign"]
-    )["cleaned_phone"].unique().reset_index(name="contacted_leads")
-    campaign_untouched = df_con[df_con["untouched"]].groupby(
-        ["utm_hit_utmSource", "utm_hit_utmCampaign"]
-    )["cleaned_phone"].unique().reset_index(name="untouched_leads")
-
-    # Campaign Engagement Summary
     if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
         total_leads = (
             df_con.groupby(["utm_hit_utmSource", "utm_hit_utmCampaign"], dropna=False)["cleaned_phone"]
@@ -144,8 +113,12 @@ if crm_file and dialer_file:
             .unstack(fill_value=0)
             .reset_index()
         )
+
         summary = summary.rename(columns={'Answered': 'answered_leads', 'Missed': 'missed_leads', 'None': 'other_leads'})
-        summary["dialled_leads"] = summary.get('answered_leads', 0) + summary.get('missed_leads', 0)
+        for col in ['answered_leads', 'missed_leads']:
+            if col not in summary.columns:
+                summary[col] = 0
+        summary["dialled_leads"] = summary['answered_leads'] + summary['missed_leads']
 
         campaign_engagement = total_leads.merge(summary, on=["utm_hit_utmSource", "utm_hit_utmCampaign"], how="left").fillna(0)
         campaign_engagement["untouched_leads"] = campaign_engagement["total_leads"] - campaign_engagement["dialled_leads"]
@@ -203,9 +176,14 @@ if crm_file and dialer_file:
         source_connectivity = (
             df_calls.groupby(["utm_hit_utmSource","call status"])
             .size().unstack(fill_value=0).reset_index()
-            .rename(columns={"Answered":"answered_calls","Missed":"missed_calls"})
         )
+        # Defensive renaming
+        if 'Answered' not in source_connectivity.columns:
+            source_connectivity['Answered'] = 0
+        if 'Missed' not in source_connectivity.columns:
+            source_connectivity['Missed'] = 0
+        source_connectivity = source_connectivity.rename(columns={"Answered":"answered_calls","Missed":"missed_calls"})
         source_connectivity["total_calls"] = source_connectivity["answered_calls"] + source_connectivity["missed_calls"]
         source_connectivity["connectivity_rate"] = (source_connectivity["answered_calls"]/source_connectivity["total_calls"]).round(2)
         st.subheader("Connectivity Rate by Source")
-        st.dataframe(source_connectivity)
+        st.dataframe(source_connectivity, use_container_width=True)
