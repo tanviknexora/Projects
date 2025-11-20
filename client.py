@@ -214,7 +214,7 @@ if crm_file and dialer_file:
                     lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
                     axis=1
                 ).round(1)
-                utm_source_data = (
+        utm_source_data = (
             campaign_engagement
             .groupby('utm_hit_utmSource', dropna=False)
             .agg(
@@ -309,6 +309,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
