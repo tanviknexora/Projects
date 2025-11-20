@@ -268,29 +268,10 @@ if crm_file and dialer_file:
         with col1:
             st.plotly_chart(fig_donut, use_container_width=True)
 
-        fig_bar = px.bar(
-            utm_source_data,
-            y='utm_hit_utmSource',
-            x='answer_rate',
-            orientation='h',
-            labels={'answer_rate': 'Answer Rate %', 'utm_hit_utmSource': 'UTM Source'},
-            text=utm_source_data['answer_rate'].round(1),
-            color='answer_rate',
-            color_continuous_scale=px.colors.sequential.Blues,
-            title='Answer Rate % by UTM Source'
-        )
-
-        fig_bar.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white'),
-            coloraxis_showscale=False,
-            margin=dict(l=80, r=20, t=50, b=50)
-        )
-
-        fig_bar.update_traces(textposition='outside')
-
-        st.plotly_chart(fig_bar, use_container_width=True)
+        with col2:
+            st.subheader("Answer Rate % by UTM Source")
+            for idx, row in utm_source_data.iterrows():
+                st.markdown(f"**{row['utm_hit_utmSource'] or 'Unknown'}:** {row['answer_rate']:.1f}%")
 
     else:
         st.warning("UTM source or campaign columns missing in CRM file.")
@@ -328,6 +309,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
