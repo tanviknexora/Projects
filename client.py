@@ -291,8 +291,6 @@ if crm_file and dialer_file:
             )
             fig_answer_rate.update_traces(marker=dict(line=dict(color='white', width=2)), textinfo='percent+label')
             st.plotly_chart(fig_answer_rate, use_container_width=True)
-
-        st.subheader("Campaign Engagement Summary")
         st.dataframe(style_campaign(campaign_engagement), use_container_width=True)
     else:
         st.warning("UTM source or campaign columns missing in CRM file.")
@@ -330,6 +328,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
