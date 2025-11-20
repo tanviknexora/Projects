@@ -37,7 +37,9 @@ def classify_status(gr):
         return 'None'
 
 # Streamlit app
-st.markdown("<h1>Campaign Analysis</h1>", unsafe_allow_html=True)
+col1, col2, col3 = st.columns([1, 3, 1])
+with col2:
+    st.header("Campaign Analysis")
 
 
 # Upload files
@@ -168,6 +170,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to proceed.")
+
 
 
 
