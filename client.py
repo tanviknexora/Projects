@@ -254,24 +254,44 @@ if crm_file and dialer_file:
             )
         st.subheader("Campaign Engagement Summary")
         # Donut chart for total leads by UTM Source
-        fig_donut = px.pie(
-            utm_source_data,
-            names='utm_hit_utmSource',
-            values='total_leads',
-            hole=0.5,
-            title='UTM Source: Total Leads'
-        )
-
-        # Layout columns to show donut and answer rates side by side
         col1, col2 = st.columns([3, 2])
 
         with col1:
-            st.plotly_chart(fig_donut, use_container_width=True)
+            fig_leads = px.pie(
+                utm_source_data,
+                names='utm_hit_utmSource',
+                values='total_leads',
+                hole=0.5,
+                title='UTM Source: Total Leads',
+                color_discrete_sequence=px.colors.sequential.Blues
+            )
+            fig_leads.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='white'),
+                legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='white')),
+                margin=dict(t=50, b=10, l=10, r=10)
+            )
+            fig_leads.update_traces(marker=dict(line=dict(color='white', width=2)))
+            st.plotly_chart(fig_leads, use_container_width=True)
 
         with col2:
-            st.subheader("Answer Rate % by UTM Source")
-            for idx, row in utm_source_data.iterrows():
-                st.markdown(f"**{row['utm_hit_utmSource'] or 'Unknown'}:** {row['answer_rate']:.1f}%")
+            fig_answer_rate = px.pie(
+                utm_source_data,
+                names='utm_hit_utmSource',
+                values='answer_rate',
+                hole=0.5,
+                title='Answer Rate % by UTM Source',
+                color_discrete_sequence=px.colors.sequential.Oranges
+            )
+            fig_answer_rate.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='white'),
+                legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='white')),
+                margin=dict(t=50, b=10, l=10, r=10)
+            )
+            fig_answer_rate.update_traces(marker=dict(line=dict(color='white', width=2)), textinfo='percent+label')
+            st.plotly_chart(fig_answer_rate, use_container_width=True)
+
         st.subheader("Campaign Engagement Summary")
         st.dataframe(style_campaign(campaign_engagement), use_container_width=True)
     else:
@@ -310,6 +330,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
