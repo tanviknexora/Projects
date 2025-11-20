@@ -213,9 +213,35 @@ if crm_file and dialer_file:
             lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
             axis=1
         ).round(1)
-
+def style_campaign(df):
+    return (
+        df.style
+        .background_gradient(cmap="Blues", subset=["total_leads"])
+        .background_gradient(cmap="Greens", subset=["dialled_leads"])
+        .background_gradient(cmap="Oranges", subset=["answered_leads"])
+        .background_gradient(cmap="Reds", subset=["missed_leads"])
+        .format("{:.1f}", subset=["contact_rate_%", "answer_rate_%"])
+        .set_properties(**{
+            "background-color": "#0e1117",
+            "color": "white",
+            "border-color": "#1f6feb",
+            "border-width": "1px",
+            "border-style": "solid"
+        })
+        .set_table_styles([
+            {"selector": "th", "props": [
+                ("background-color", "#161b22"),
+                ("color", "white"),
+                ("font-weight", "bold"),
+                ("border-color", "#30363d")
+            ]},
+            {"selector": "tr:hover", "props": [
+                ("background-color", "#1f2936")
+            ]}
+        ])
+    )
         st.subheader("Campaign Engagement Summary")
-        st.dataframe(campaign_engagement)
+        st.dataframe(style_campaign(campaign_engagement), use_container_width=True)
 
     else:
         st.warning("UTM source or campaign columns missing in CRM file.")
@@ -253,6 +279,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
