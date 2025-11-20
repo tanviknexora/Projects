@@ -223,6 +223,43 @@ if crm_file and dialer_file:
             )
             .reset_index()
         )
+        # Create Plotly donut chart with dark theme styling
+        fig_donut = px.pie(
+            utm_source_data,
+            names='utm_hit_utmSource',
+            values='total_leads',
+            hole=0.5,
+            title='UTM Source: Total Leads',
+            color_discrete_sequence=px.colors.sequential.Blues
+        )
+
+        fig_donut.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',      # transparent plot background
+            paper_bgcolor='rgba(0,0,0,0)',     # transparent overall background
+            font=dict(color='white'),
+            legend=dict(
+                bgcolor='rgba(0,0,0,0)',       # transparent legend bg
+                font=dict(color='white')
+            ),
+            margin=dict(t=50, b=10, l=10, r=10)
+        )
+
+        fig_donut.update_traces(
+            hoverinfo='label+percent+value',
+            textinfo='percent',
+            textfont_size=14,
+            marker=dict(line=dict(color='white', width=2))  # white border on slices
+        )
+
+        # Layout with columns for donut and answer rate side by side
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            st.plotly_chart(fig_donut, use_container_width=True)
+
+        with col2:
+            st.subheader("Answer Rate % by UTM Source")
+            for idx, row in utm_source_data.iterrows():
+                st.markdown(f"**{row['utm_hit_utmSource'] or 'Unknown'}:** {row['answer_rate']:.1f}%")
 
 
         def style_campaign(df):
@@ -310,6 +347,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
