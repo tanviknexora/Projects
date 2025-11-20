@@ -6,6 +6,7 @@ import re
 import phonenumbers
 import ast
 import math
+import plotly.express as px
 
 st.markdown("""
 <style>
@@ -241,6 +242,25 @@ if crm_file and dialer_file:
                 ])
             )
         st.subheader("Campaign Engagement Summary")
+        # Donut chart for total leads by UTM Source
+        fig_donut = px.pie(
+            utm_source_data,
+            names='utm_hit_utmSource',
+            values='total_leads',
+            hole=0.5,
+            title='UTM Source: Total Leads'
+        )
+
+        # Layout columns to show donut and answer rates side by side
+        col1, col2 = st.columns([3, 2])
+
+        with col1:
+            st.plotly_chart(fig_donut, use_container_width=True)
+
+        with col2:
+            st.subheader("Answer Rate % by UTM Source")
+            for idx, row in utm_source_data.iterrows():
+                st.markdown(f"**{row['utm_hit_utmSource'] or 'Unknown'}:** {row['answer_rate_%']:.1f}%")
         st.dataframe(style_campaign(campaign_engagement), use_container_width=True)
 
     else:
@@ -279,6 +299,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
