@@ -171,7 +171,7 @@ if crm_file and dialer_file:
             axis=1
         ).round(1)
 
-        st.subheader("📊 Campaign Engagement Summary")
+        st.subheader("Campaign Engagement Summary")
         st.dataframe(campaign_engagement)
 
     else:
@@ -210,4 +210,5 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
