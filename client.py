@@ -131,9 +131,39 @@ if crm_file and dialer_file:
 
         st.subheader("Campaign Engagement Summary")
         st.dataframe(campaign_engagement)
-
     else:
         st.warning("UTM source or UTM campaign columns not found in CRM data.")
+
+    # Dialer summary (per phone)
+    dialer_summary = (
+        df_calls.groupby(["cleaned_phone", "first_name", "account"])
+        .agg(
+            answered_calls=("call status", lambda x: (x == "Answered").sum()),
+            missed_calls=("call status", lambda x: (x == "Missed").sum()),
+            total_duration_sec=("duration_sec", "sum"),
+            answered_duration_sec=("duration_sec", lambda x: x[df_calls.loc[x.index, "call status"] == "Answered"].sum())
+        )
+        .reset_index()
+    )
+
+    dialer_summary["answered_duration_hms"] = pd.to_timedelta(
+        dialer_summary["answered_duration_sec"], unit="s"
+    ).astype(str).str.split().str[-1]
+
+    dialer_summary["total_duration_hms"] = pd.to_timedelta(
+        dialer_summary["total_duration_sec"], unit="s"
+    ).astype(str).str.split().str[-1]
+
+    dialer_summary["total_calls"] = dialer_summary["answered_calls"] + dialer_summary["missed_calls"]
+
+    dialer_summary = dialer_summary[
+        ["cleaned_phone", "first_name", "account",
+         "answered_calls", "missed_calls", "total_calls",
+         "answered_duration_hms", "total_duration_hms"]
+    ]
+
+    st.subheader("Dialer Calls Summary")
+    st.dataframe(dialer_summary)
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to proceed.")
