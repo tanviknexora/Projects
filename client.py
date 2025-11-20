@@ -45,7 +45,7 @@ def classify_status(gr):
 # -------------------------------
 # Streamlit UI
 # -------------------------------
-st.header("📞 Campaign Analysis Dashboard")
+st.header("Campaign Analysis")
 
 crm_file = st.sidebar.file_uploader("Upload CRM user_exports Excel file", type=["xlsx"])
 dialer_file = st.sidebar.file_uploader("Upload Dialer export Excel file", type=["xlsx"])
@@ -204,9 +204,10 @@ if crm_file and dialer_file:
          "answered_duration_hms", "total_duration_hms"]
     ]
 
-    st.subheader("📞 Dialer Calls Summary")
+    st.subheader("Dialer Calls Summary")
     st.dataframe(dialer_summary)
 
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
