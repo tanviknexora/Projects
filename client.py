@@ -9,15 +9,16 @@ import math
 
 st.markdown("""
 <style>
+
 div.stMetric {
-    background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
-    border: 1px solid #cce0ff;
+    background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+    border: 1px solid #1f6feb;     /* Neon blue border */
     border-radius: 14px;
 
-    padding: 18px 12px;
+    padding: 18px 14px;
     margin-bottom: 18px;
 
-    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.6);
 
     transition: all 0.25s ease-in-out;
 }
@@ -25,24 +26,27 @@ div.stMetric {
 /* Hover effect */
 div.stMetric:hover {
     transform: translateY(-3px);
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.12);
-    border-color: #66a3ff;
+    border-color: #58a6ff;         /* Brighter blue on hover */
+    box-shadow: 0px 4px 14px rgba(88, 166, 255, 0.35);
 }
 
-/* Change metric title color */
+/* Metric label text */
 div.stMetric label {
     font-size: 15px !important;
     font-weight: 600 !important;
-    color: #005bb5 !important;
+    color: #c9d1d9 !important;     /* Soft grey (GitHub Dark text) */
 }
 
-/* Change metric value color */
+/* Metric value text */
 div.stMetric > div > div {
-    color: #003d80 !important;
+    color: #58a6ff !important;     /* Neon blue value */
     font-weight: 800 !important;
+    font-size: 22px !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
+
 
 # -------------------------------
 # Helper Functions
@@ -249,6 +253,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
