@@ -211,9 +211,19 @@ if crm_file and dialer_file:
         ).round(1)
 
         campaign_engagement["answer_rate_%"] = campaign_engagement.apply(
-            lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
-            axis=1
-        ).round(1)
+                    lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
+                    axis=1
+                ).round(1)
+                utm_source_data = (
+            campaign_engagement
+            .groupby('utm_hit_utmSource', dropna=False)
+            .agg(
+                total_leads=('total_leads', 'sum'),
+                answer_rate_%=('answer_rate_%', 'mean')
+            )
+            .reset_index()
+        )
+
         def style_campaign(df):
             return (
                 df.style
@@ -299,6 +309,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
