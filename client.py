@@ -7,7 +7,16 @@ import phonenumbers
 import ast
 import math
 
-
+st.markdown("""
+<style>
+div.stMetric {
+    border: 2px solid #0078D7;  /* blue border */
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+</style>
+""", unsafe_allow_html=True)
 # -------------------------------
 # Helper Functions
 # -------------------------------
@@ -120,10 +129,13 @@ if crm_file and dialer_file:
     # DISPLAY METRICS
     # -------------------------------
     col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Leads", total_leads)
+    with col2:
+        st.metric("Contacted Leads", contacted_leads)
+    with col3:
+        st.metric("Untouched Leads", untouched_leads)
 
-    col1.metric("Total Leads", total_leads)
-    col2.metric("Contacted Leads", contacted_leads)
-    col3.metric("Untouched Leads", untouched_leads)
 
 
     # -------------------------------
@@ -210,5 +222,6 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
