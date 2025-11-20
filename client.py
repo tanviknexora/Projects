@@ -10,13 +10,40 @@ import math
 st.markdown("""
 <style>
 div.stMetric {
-    border: 2px solid #0078D7;  /* blue border */
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 15px;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+    border: 1px solid #cce0ff;
+    border-radius: 14px;
+
+    padding: 18px 12px;
+    margin-bottom: 18px;
+
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
+
+    transition: all 0.25s ease-in-out;
+}
+
+/* Hover effect */
+div.stMetric:hover {
+    transform: translateY(-3px);
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.12);
+    border-color: #66a3ff;
+}
+
+/* Change metric title color */
+div.stMetric label {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #005bb5 !important;
+}
+
+/* Change metric value color */
+div.stMetric > div > div {
+    color: #003d80 !important;
+    font-weight: 800 !important;
 }
 </style>
 """, unsafe_allow_html=True)
+
 # -------------------------------
 # Helper Functions
 # -------------------------------
@@ -222,6 +249,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
