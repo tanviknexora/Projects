@@ -1,25 +1,5 @@
 import streamlit as st
 st.set_page_config(layout="wide")
-st.markdown(
-    """
-    <style>
-    /* Sets the whole Streamlit app background to black */
-    .css-18e3th9 {  /* Main app background wrapper class as of Streamlit 1.x */
-        background-color: #000000 !important;
-        color: white !important;  /* Make default text white for contrast */
-    }
-    /* Also set sidebar background black */
-    .css-1d391kg {  /* Sidebar background wrapper class */
-        background-color: #000000 !important;
-    }
-    /* Optional: set footer background black if visible */
-    footer, header, .css-1aumxhk {
-        background-color: #000000 !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 import pandas as pd
 import numpy as np
 import re
@@ -348,6 +328,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
