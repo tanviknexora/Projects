@@ -272,7 +272,8 @@ if crm_file and dialer_file:
             st.subheader("Answer Rate % by UTM Source")
             for idx, row in utm_source_data.iterrows():
                 st.markdown(f"**{row['utm_hit_utmSource'] or 'Unknown'}:** {row['answer_rate']:.1f}%")
-
+        st.subheader("Campaign Engagement Summary")
+        st.dataframe(style_campaign(campaign_engagement), use_container_width=True)
     else:
         st.warning("UTM source or campaign columns missing in CRM file.")
 
@@ -309,6 +310,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
