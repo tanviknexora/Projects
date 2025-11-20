@@ -210,7 +210,7 @@ if crm_file and dialer_file:
             (campaign_engagement["dialled_leads"] / campaign_engagement["total_leads"]) * 100
         ).round(1)
 
-        campaign_engagement["answer_rate_%"] = campaign_engagement.apply(
+        campaign_engagement["answer_rate"] = campaign_engagement.apply(
                     lambda x: (x["answered_leads"] / x["dialled_leads"] * 100) if x["dialled_leads"] > 0 else 0,
                     axis=1
                 ).round(1)
@@ -219,7 +219,7 @@ if crm_file and dialer_file:
             .groupby('utm_hit_utmSource', dropna=False)
             .agg(
                 total_leads=('total_leads', 'sum'),
-                answer_rate_%=('answer_rate_%', 'mean')
+                answer_rate=('answer_rate', 'mean')
             )
             .reset_index()
         )
@@ -232,7 +232,7 @@ if crm_file and dialer_file:
                 .background_gradient(cmap="Greens", subset=["dialled_leads"])
                 .background_gradient(cmap="Oranges", subset=["answered_leads"])
                 .background_gradient(cmap="Reds", subset=["missed_leads"])
-                .format("{:.1f}", subset=["contact_rate_%", "answer_rate_%"])
+                .format("{:.1f}", subset=["contact_rate_%", "answer_rate"])
                 .set_properties(**{
                     "background-color": "#0e1117",
                     "color": "white",
@@ -271,7 +271,7 @@ if crm_file and dialer_file:
         with col2:
             st.subheader("Answer Rate % by UTM Source")
             for idx, row in utm_source_data.iterrows():
-                st.markdown(f"**{row['utm_hit_utmSource'] or 'Unknown'}:** {row['answer_rate_%']:.1f}%")
+                st.markdown(f"**{row['utm_hit_utmSource'] or 'Unknown'}:** {row['answer_rate']:.1f}%")
         st.dataframe(style_campaign(campaign_engagement), use_container_width=True)
 
     else:
@@ -310,6 +310,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to begin analysis.")
+
 
 
 
