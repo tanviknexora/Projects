@@ -95,9 +95,17 @@ if crm_file and dialer_file:
     contacted_phones = df_calls["contacted"].sum()
     untouched_phones = df_calls["untouched"].sum()
 
-    st.write(f"Total Leads: {total_leads}")
-    st.write(f"Contacted Leads: {contacted_phones}")
-    st.write(f"Untouched Leads: {untouched_phones}")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(label="Total Leads", value=total_leads)
+
+    with col2:
+        st.metric(label="Contacted Leads", value=contacted_phones)
+
+    with col3:
+        st.metric(label="Untouched Leads", value=untouched_phones)
+
 
     # Campaign-wise engagement summary
     if "utm_hit_utmSource" in df_con.columns and "utm_hit_utmCampaign" in df_con.columns:
@@ -170,6 +178,7 @@ if crm_file and dialer_file:
 
 else:
     st.info("Please upload both CRM and Dialer Excel files to proceed.")
+
 
 
 
